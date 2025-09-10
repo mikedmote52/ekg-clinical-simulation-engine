@@ -1,0 +1,25 @@
+{
+  "name": "@ekg-sim/education-engine",
+  "version": "1.0.0",
+  "description": "Adaptive medical education engine with multi-level content generation",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src/**/*.ts",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@ekg-sim/medical-types": "^1.0.0",
+    "marked": "^9.1.6",
+    "dompurify": "^3.0.7",
+    "speech-synthesis-polyfill": "^0.1.2"
+  },
+  "devDependencies": {
+    "@types/dompurify": "^3.0.5",
+    "@types/marked": "^6.0.0",
+    "jest": "^29.7.0",
+    "typescript": "^5.2.2"
+  }
+}

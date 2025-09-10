@@ -1,0 +1,34 @@
+{
+  "name": "ekg-clinical-simulation",
+  "version": "1.0.0",
+  "description": "Clinical-grade EKG simulation with 3D heart visualization and multi-agent orchestration",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "agents/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "medical:validate": "node scripts/validate-medical-accuracy.js",
+    "3d:preview": "cd packages/heart-3d && npm run preview",
+    "agent:orchestrate": "node agents/orchestrator/run.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "eslint": "^8.56.0",
+    "prettier": "^3.2.4",
+    "turbo": "^1.11.3",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

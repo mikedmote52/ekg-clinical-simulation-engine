@@ -1,0 +1,69 @@
+{
+  "version": "1.0",
+  "agents": {
+    "medical-foundation": {
+      "type": "specialized",
+      "domain": "clinical-cardiology",
+      "system_prompt": "You are a specialized clinical cardiologist AI agent with deep expertise in EKG interpretation, cardiac electrophysiology, and medical validation. Focus exclusively on clinical accuracy, rhythm classification, and physiological correctness.",
+      "max_turns": 15,
+      "tools": ["read", "write", "analyze"],
+      "validation": "medical-accuracy",
+      "outputs": ["medical-analysis", "rhythm-classification", "conduction-timing"]
+    },
+    "3d-visualization": {
+      "type": "specialized", 
+      "domain": "3d-graphics-medical",
+      "system_prompt": "You are a 3D visualization specialist focused on anatomically accurate heart modeling and medical animation. Create Three.js-based heart visualizations synchronized to EKG timing with clinical precision.",
+      "max_turns": 20,
+      "tools": ["3d-modeling", "animation", "webgl"],
+      "validation": "animation-medical-sync",
+      "inputs": ["medical-analysis"],
+      "outputs": ["3d-config", "animation-timing", "rendering-system"]
+    },
+    "frontend-integration": {
+      "type": "specialized",
+      "domain": "medical-ui-react",
+      "system_prompt": "You are a medical interface specialist creating React/Next.js applications for healthcare. Focus on accessibility, real-time data display, and professional medical interface design.",
+      "max_turns": 12,
+      "tools": ["react", "nextjs", "ui-components"],
+      "validation": "interface-medical-compliance",
+      "inputs": ["medical-analysis", "3d-config"],
+      "outputs": ["web-interface", "data-integration", "user-controls"]
+    },
+    "educational-content": {
+      "type": "specialized",
+      "domain": "medical-education",
+      "system_prompt": "You are a medical education specialist creating adaptive learning content. Generate multi-level explanations, narration, and educational sequences that maintain clinical accuracy while adapting to different expertise levels.",
+      "max_turns": 10,
+      "tools": ["content-generation", "narration", "accessibility"],
+      "validation": "educational-medical-accuracy",
+      "inputs": ["medical-analysis", "3d-config"],
+      "outputs": ["educational-content", "narration-timing", "learning-sequences"]
+    },
+    "orchestrator": {
+      "type": "coordinator",
+      "domain": "multi-agent-coordination",
+      "system_prompt": "You are the orchestrator agent responsible for coordinating all specialized agents, ensuring proper sequencing, validation, and integration. Maintain shared context and enforce medical accuracy throughout the pipeline.",
+      "max_turns": 25,
+      "tools": ["coordination", "validation", "integration"],
+      "manages": ["medical-foundation", "3d-visualization", "frontend-integration", "educational-content"],
+      "validation": "complete-system-integration"
+    }
+  },
+  "coordination": {
+    "sequence": [
+      "medical-foundation",
+      "3d-visualization", 
+      "educational-content",
+      "frontend-integration"
+    ],
+    "validation_gates": true,
+    "shared_context": "app-context",
+    "error_handling": "block-and-retry"
+  },
+  "medical_compliance": {
+    "accuracy_threshold": 0.95,
+    "validation_required": true,
+    "clinical_review": true
+  }
+}
