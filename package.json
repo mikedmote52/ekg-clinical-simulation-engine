@@ -3,11 +3,6 @@
   "version": "1.0.0",
   "description": "Clinical-grade EKG simulation with 3D heart visualization and multi-agent orchestration",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*",
-    "agents/*"
-  ],
   "scripts": {
     "dev": "cd apps/web && npm run dev",
     "build": "cd apps/web && npm install && npm run build",
@@ -16,7 +11,7 @@
     "lint": "echo \"Linting...\"",
     "typecheck": "echo \"Type checking...\"",
     "medical:validate": "echo \"Medical validation...\"",
-    "postinstall": "cd apps/web && npm install"
+    "postinstall": "echo \"Install complete\""
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
