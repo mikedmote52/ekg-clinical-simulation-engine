@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc && rollup -c",
+    "build": "tsc",
     "dev": "rollup -c -w",
     "preview": "vite preview --port 3001",
     "lint": "eslint src/**/*.ts",
@@ -16,7 +16,7 @@
     "@types/three": "^0.158.3",
     "dat.gui": "^0.7.9",
     "stats.js": "^0.17.0",
-    "@ekg-sim/medical-types": "^1.0.0"
+    "@ekg-sim/medical-types": "file:../medical-types"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^11.1.5",

@@ -21,7 +21,15 @@
     "typescript": "^5.2.2",
     "@types/node": "^20.9.0",
     "@types/react": "^18.2.37",
-    "@types/react-dom": "^18.2.15"
+    "@types/react-dom": "^18.2.15",
+    "three": "^0.158.0",
+    "@types/three": "^0.158.3",
+    "@ekg-sim/heart-3d": "file:../../packages/heart-3d",
+    "@ekg-sim/medical-types": "file:../../packages/medical-types",
+    "@ekg-sim/ekg-processor": "file:../../packages/ekg-processor",
+    "@ekg-sim/education-engine": "file:../../packages/education-engine",
+    "sharp": "^0.32.6",
+    "jimp": "^0.22.10"
   },
   "devDependencies": {
     "eslint": "^8.54.0",
