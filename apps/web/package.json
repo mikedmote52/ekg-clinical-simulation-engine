@@ -13,21 +13,14 @@
     "next": "^14.0.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "@ekg-sim/medical-types": "^1.0.0",
-    "@ekg-sim/heart-3d": "^1.0.0",
-    "@ekg-sim/ekg-processor": "^1.0.0",
-    "@ekg-sim/education-engine": "^1.0.0",
     "three": "^0.158.0",
     "@types/three": "^0.158.3",
     "@react-three/fiber": "^8.15.12",
     "@react-three/drei": "^9.88.13",
     "framer-motion": "^10.16.5",
     "lucide-react": "^0.294.0",
-    "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
-    "tailwind-merge": "^2.0.0",
-    "react-dropzone": "^14.2.3",
-    "react-toast": "^1.0.3"
+    "react-dropzone": "^14.2.3"
   },
   "devDependencies": {
     "@types/node": "^20.9.0",

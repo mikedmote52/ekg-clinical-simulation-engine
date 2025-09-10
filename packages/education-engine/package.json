@@ -13,8 +13,7 @@
   "dependencies": {
     "@ekg-sim/medical-types": "^1.0.0",
     "marked": "^9.1.6",
-    "dompurify": "^3.0.7",
-    "speech-synthesis-polyfill": "^0.1.2"
+    "dompurify": "^3.0.7"
   },
   "devDependencies": {
     "@types/dompurify": "^3.0.5",
