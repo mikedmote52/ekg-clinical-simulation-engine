@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    appDir: true,
-  },
+  // Remove deprecated experimental.appDir
   
   // Simplified configuration for deployment
   async headers() {
