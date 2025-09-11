@@ -2,7 +2,14 @@ services:
   - type: web
     name: ekg-clinical-simulation-engine
     env: node
-    buildCommand: cd apps/web && npm install && npm run build
+    buildCommand: |
+      # Install and build packages first
+      cd packages/medical-types && npm install && npm run build && cd ../..
+      cd packages/ekg-processor && npm install && npm run build && cd ../..
+      cd packages/education-engine && npm install && npm run build && cd ../..
+      cd packages/heart-3d && npm install && npm run build && cd ../..
+      # Now build the web app
+      cd apps/web && npm install --save-dev eslint && npm install && npm run build
     startCommand: cd apps/web && npm start
     rootDir: .
     plan: free
