@@ -10,25 +10,17 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ekg-sim/education-engine": "file:../../packages/education-engine",
-    "@ekg-sim/ekg-processor": "file:../../packages/ekg-processor",
-    "@ekg-sim/heart-3d": "file:../../packages/heart-3d",
-    "@ekg-sim/medical-types": "file:../../packages/medical-types",
     "@types/node": "^20.9.0",
     "@types/react": "^18.2.37",
     "@types/react-dom": "^18.2.15",
-    "@types/three": "^0.158.3",
     "autoprefixer": "^10.4.16",
     "clsx": "^2.0.0",
-    "jimp": "^0.22.10",
     "lucide-react": "^0.294.0",
     "next": "^14.0.3",
     "postcss": "^8.4.31",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "sharp": "^0.32.6",
     "tailwindcss": "^3.3.6",
-    "three": "^0.158.0",
     "typescript": "^5.2.2"
   },
   "devDependencies": {
