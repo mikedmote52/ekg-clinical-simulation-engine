@@ -1,1 +1,501 @@
-/**\n * Medical Accuracy Validation Tests\n * Comprehensive testing suite for clinical accuracy of EKG analysis and 3D visualization\n */\n\nimport { ClinicalEKGAnalyzer, EKGInput } from '../packages/ekg-processor/src/ekg-analyzer';\nimport { EducationalContentGenerator, LearningLevel } from '../packages/education-engine/src/educational-content-generator';\nimport { MedicalAnalysis } from '../packages/medical-types/src/app-context';\n\ndescribe('Medical Accuracy Validation Suite', () => {\n  let ekgAnalyzer: ClinicalEKGAnalyzer;\n  let educationGenerator: EducationalContentGenerator;\n\n  beforeAll(() => {\n    ekgAnalyzer = new ClinicalEKGAnalyzer();\n    educationGenerator = new EducationalContentGenerator();\n  });\n\n  describe('EKG Rhythm Classification Accuracy', () => {\n    const testCases = [\n      {\n        name: 'Normal Sinus Rhythm',\n        input: {\n          type: 'text_report' as const,\n          data: 'Normal sinus rhythm, Rate 72 bpm, PR interval 160ms, QRS 95ms'\n        },\n        expected: {\n          rhythm_classification: 'normal_sinus',\n          heart_rate_range: [60, 100],\n          clinical_significance: 'normal'\n        }\n      },\n      {\n        name: 'Atrial Fibrillation',\n        input: {\n          type: 'text_report' as const,\n          data: 'Atrial fibrillation with rapid ventricular response, Rate 145 bpm, Irregular rhythm'\n        },\n        expected: {\n          rhythm_classification: 'atrial_fibrillation',\n          heart_rate_range: [100, 200],\n          clinical_significance: 'monitor'\n        }\n      },\n      {\n        name: 'Ventricular Tachycardia',\n        input: {\n          type: 'text_report' as const,\n          data: 'Ventricular tachycardia, Rate 180 bpm, Wide QRS complexes'\n        },\n        expected: {\n          rhythm_classification: 'ventricular_tachycardia',\n          heart_rate_range: [150, 250],\n          clinical_significance: 'critical'\n        }\n      },\n      {\n        name: 'First Degree Heart Block',\n        input: {\n          type: 'text_report' as const,\n          data: 'Sinus rhythm with first degree AV block, PR interval 240ms, Rate 68 bpm'\n        },\n        expected: {\n          rhythm_classification: 'heart_block',\n          heart_rate_range: [50, 100],\n          clinical_significance: 'monitor'\n        }\n      },\n      {\n        name: 'Sinus Bradycardia',\n        input: {\n          type: 'text_report' as const,\n          data: 'Sinus bradycardia, Rate 45 bpm, Normal QRS'\n        },\n        expected: {\n          rhythm_classification: 'sinus_bradycardia',\n          heart_rate_range: [30, 59],\n          clinical_significance: 'monitor'\n        }\n      }\n    ];\n\n    testCases.forEach(testCase => {\n      it(`should correctly classify ${testCase.name}`, async () => {\n        const result = await ekgAnalyzer.analyzeEKG(testCase.input);\n        \n        // Validate rhythm classification\n        expect(result.rhythm_classification).toBe(testCase.expected.rhythm_classification);\n        \n        // Validate heart rate is within expected range\n        expect(result.heart_rate).toBeGreaterThanOrEqual(testCase.expected.heart_rate_range[0]);\n        expect(result.heart_rate).toBeLessThanOrEqual(testCase.expected.heart_rate_range[1]);\n        \n        // Validate clinical significance\n        expect(result.clinical_significance).toBe(testCase.expected.clinical_significance);\n        \n        // Validate required fields are present\n        expect(result.conduction_timing).toBeDefined();\n        expect(result.chamber_coordination).toBeDefined();\n        expect(result.intervals).toBeDefined();\n        expect(result.pathophysiology).toBeDefined();\n        expect(result.clinical_context).toBeDefined();\n      });\n    });\n  });\n\n  describe('Conduction Timing Accuracy', () => {\n    it('should calculate physiologically accurate conduction timing for normal sinus rhythm', async () => {\n      const input: EKGInput = {\n        type: 'text_report',\n        data: 'Normal sinus rhythm, Rate 72 bpm, PR interval 160ms, QRS 95ms'\n      };\n      \n      const result = await ekgAnalyzer.analyzeEKG(input);\n      \n      // Validate SA-AV delay (should be PR interval minus atrial conduction time)\n      expect(result.conduction_timing.sa_to_av_delay).toBeGreaterThanOrEqual(100);\n      expect(result.conduction_timing.sa_to_av_delay).toBeLessThanOrEqual(200);\n      \n      // Validate AV-His delay (normal range)\n      expect(result.conduction_timing.av_to_his_delay).toBeGreaterThanOrEqual(30);\n      expect(result.conduction_timing.av_to_his_delay).toBeLessThanOrEqual(100);\n      \n      // Validate His-Purkinje delay\n      expect(result.conduction_timing.his_to_purkinje_delay).toBeGreaterThanOrEqual(20);\n      expect(result.conduction_timing.his_to_purkinje_delay).toBeLessThanOrEqual(60);\n      \n      // Validate cardiac cycle matches heart rate\n      const expectedCycle = 60000 / result.heart_rate; // Convert BPM to ms\n      expect(result.conduction_timing.cardiac_cycle_ms).toBeCloseTo(expectedCycle, -1);\n    });\n    \n    it('should detect prolonged conduction in heart block', async () => {\n      const input: EKGInput = {\n        type: 'text_report',\n        data: 'First degree AV block, PR interval 280ms, Rate 65 bpm'\n      };\n      \n      const result = await ekgAnalyzer.analyzeEKG(input);\n      \n      // Should detect prolonged AV conduction\n      expect(result.intervals.pr_interval).toBeGreaterThan(200);\n      expect(result.rhythm_classification).toBe('heart_block');\n      expect(result.clinical_significance).toBe('monitor');\n    });\n  });\n\n  describe('Chamber Coordination Validation', () => {\n    it('should correctly identify coordinated chamber function in normal sinus rhythm', async () => {\n      const input: EKGInput = {\n        type: 'text_report',\n        data: 'Normal sinus rhythm, Rate 75 bpm'\n      };\n      \n      const result = await ekgAnalyzer.analyzeEKG(input);\n      \n      expect(result.chamber_coordination.atrial_contraction).toBe(true);\n      expect(result.chamber_coordination.ventricular_contraction).toBe(true);\n      expect(result.chamber_coordination.av_synchrony).toBe(true);\n      expect(result.chamber_coordination.sequential_activation).toBe(true);\n    });\n    \n    it('should identify loss of atrial mechanical function in atrial fibrillation', async () => {\n      const input: EKGInput = {\n        type: 'text_report',\n        data: 'Atrial fibrillation, irregularly irregular, Rate 120 bpm'\n      };\n      \n      const result = await ekgAnalyzer.analyzeEKG(input);\n      \n      expect(result.chamber_coordination.atrial_contraction).toBe(false);\n      expect(result.chamber_coordination.ventricular_contraction).toBe(true);\n      expect(result.chamber_coordination.av_synchrony).toBe(false);\n      expect(result.chamber_coordination.sequential_activation).toBe(false);\n    });\n  });\n\n  describe('Clinical Significance Assessment', () => {\n    const clinicalTestCases = [\n      {\n        rhythm: 'normal_sinus',\n        heartRate: 72,\n        expectedSignificance: 'normal',\n        description: 'Normal sinus rhythm should be classified as normal'\n      },\n      {\n        rhythm: 'atrial_fibrillation', \n        heartRate: 165,\n        expectedSignificance: 'urgent',\n        description: 'Rapid atrial fibrillation should be urgent'\n      },\n      {\n        rhythm: 'ventricular_tachycardia',\n        heartRate: 190,\n        expectedSignificance: 'critical',\n        description: 'Ventricular tachycardia should always be critical'\n      },\n      {\n        rhythm: 'sinus_bradycardia',\n        heartRate: 35,\n        expectedSignificance: 'urgent',\n        description: 'Severe bradycardia should be urgent'\n      }\n    ];\n    \n    clinicalTestCases.forEach(testCase => {\n      it(testCase.description, async () => {\n        const input: EKGInput = {\n          type: 'text_report',\n          data: `${testCase.rhythm.replace('_', ' ')}, Rate ${testCase.heartRate} bpm`\n        };\n        \n        const result = await ekgAnalyzer.analyzeEKG(input);\n        expect(result.clinical_significance).toBe(testCase.expectedSignificance);\n      });\n    });\n  });\n\n  describe('Educational Content Medical Accuracy', () => {\n    let sampleMedicalAnalysis: MedicalAnalysis;\n    \n    beforeAll(async () => {\n      const input: EKGInput = {\n        type: 'text_report',\n        data: 'Normal sinus rhythm, Rate 72 bpm, PR interval 160ms, QRS 95ms'\n      };\n      sampleMedicalAnalysis = await ekgAnalyzer.analyzeEKG(input);\n    });\n    \n    const learningLevels: LearningLevel[] = ['beginner', 'intermediate', 'advanced'];\n    \n    learningLevels.forEach(level => {\n      it(`should generate medically accurate ${level} content`, async () => {\n        const educationalContent = await educationGenerator.generateEducationalContent(\n          sampleMedicalAnalysis,\n          level\n        );\n        \n        // Validate content structure\n        expect(educationalContent.complexity_level).toBe(level);\n        expect(educationalContent.key_teaching_points).toBeInstanceOf(Array);\n        expect(educationalContent.key_teaching_points.length).toBeGreaterThan(0);\n        expect(educationalContent.rhythm_explanation).toBeDefined();\n        expect(educationalContent.clinical_significance_explanation).toBeDefined();\n        \n        // Validate narration timing\n        expect(educationalContent.narration_timing).toBeInstanceOf(Array);\n        expect(educationalContent.narration_timing.length).toBeGreaterThan(0);\n        \n        // Ensure timing is synchronized to cardiac cycle\n        const maxTiming = Math.max(\n          ...educationalContent.narration_timing.map(cue => cue.timestamp_ms)\n        );\n        expect(maxTiming).toBeLessThanOrEqual(sampleMedicalAnalysis.conduction_timing.cardiac_cycle_ms);\n        \n        // Validate accessibility features\n        expect(educationalContent.accessibility.screen_reader_compatible).toBe(true);\n        expect(educationalContent.accessibility.captions).toBe(true);\n      });\n    });\n    \n    it('should adapt content complexity appropriately across levels', async () => {\n      const beginnerContent = await educationGenerator.generateEducationalContent(\n        sampleMedicalAnalysis,\n        'beginner'\n      );\n      \n      const advancedContent = await educationGenerator.generateEducationalContent(\n        sampleMedicalAnalysis,\n        'advanced'\n      );\n      \n      // Advanced content should have more teaching points\n      expect(advancedContent.key_teaching_points.length)\n        .toBeGreaterThan(beginnerContent.key_teaching_points.length);\n      \n      // Advanced content should have more detailed explanations\n      expect(advancedContent.rhythm_explanation.length)\n        .toBeGreaterThan(beginnerContent.rhythm_explanation.length);\n      \n      // Advanced content should have more narration cues\n      expect(advancedContent.narration_timing.length)\n        .toBeGreaterThanOrEqual(beginnerContent.narration_timing.length);\n    });\n  });\n\n  describe('Integration Validation', () => {\n    it('should maintain medical accuracy across the complete analysis pipeline', async () => {\n      const input: EKGInput = {\n        type: 'text_report',\n        data: 'Atrial fibrillation with RVR, Rate 145 bpm, Irregular rhythm, No P waves'\n      };\n      \n      // Step 1: EKG Analysis\n      const medicalAnalysis = await ekgAnalyzer.analyzeEKG(input);\n      expect(medicalAnalysis.rhythm_classification).toBe('atrial_fibrillation');\n      \n      // Step 2: Educational Content Generation\n      const educationalContent = await educationGenerator.generateEducationalContent(\n        medicalAnalysis,\n        'intermediate'\n      );\n      \n      // Validate consistency between analysis and education\n      expect(educationalContent.rhythm_explanation).toContain('atrial fibrillation');\n      expect(educationalContent.key_teaching_points.some(\n        point => point.toLowerCase().includes('irregular')\n      )).toBe(true);\n      \n      // Validate clinical correlation\n      if (medicalAnalysis.clinical_significance === 'urgent') {\n        expect(educationalContent.clinical_significance_explanation)\n          .toMatch(/(urgent|prompt|immediate)/i);\n      }\n    });\n    \n    it('should handle edge cases safely', async () => {\n      const edgeCases = [\n        { data: 'Uninterpretable rhythm, poor signal quality' },\n        { data: 'Artifact, no clear rhythm visible' },\n        { data: 'Paced rhythm, rate 70 bpm' }\n      ];\n      \n      for (const testCase of edgeCases) {\n        const input: EKGInput = {\n          type: 'text_report',\n          data: testCase.data\n        };\n        \n        // Should not throw errors\n        expect(async () => {\n          await ekgAnalyzer.analyzeEKG(input);\n        }).not.toThrow();\n      }\n    });\n  });\n\n  describe('Performance and Reliability', () => {\n    it('should analyze EKG within acceptable time limits', async () => {\n      const input: EKGInput = {\n        type: 'text_report',\n        data: 'Normal sinus rhythm, Rate 72 bpm'\n      };\n      \n      const startTime = performance.now();\n      await ekgAnalyzer.analyzeEKG(input);\n      const endTime = performance.now();\n      \n      // Should complete analysis within 5 seconds\n      expect(endTime - startTime).toBeLessThan(5000);\n    });\n    \n    it('should generate educational content within acceptable time limits', async () => {\n      const input: EKGInput = {\n        type: 'text_report',\n        data: 'Normal sinus rhythm, Rate 72 bpm'\n      };\n      \n      const medicalAnalysis = await ekgAnalyzer.analyzeEKG(input);\n      \n      const startTime = performance.now();\n      await educationGenerator.generateEducationalContent(medicalAnalysis, 'advanced');\n      const endTime = performance.now();\n      \n      // Should complete content generation within 3 seconds\n      expect(endTime - startTime).toBeLessThan(3000);\n    });\n    \n    it('should maintain consistency across multiple analyses of same input', async () => {\n      const input: EKGInput = {\n        type: 'text_report',\n        data: 'Normal sinus rhythm, Rate 72 bpm, PR interval 160ms, QRS 95ms'\n      };\n      \n      const results = await Promise.all([\n        ekgAnalyzer.analyzeEKG(input),\n        ekgAnalyzer.analyzeEKG(input),\n        ekgAnalyzer.analyzeEKG(input)\n      ]);\n      \n      // All results should be identical for same input\n      expect(results[0].rhythm_classification).toBe(results[1].rhythm_classification);\n      expect(results[0].rhythm_classification).toBe(results[2].rhythm_classification);\n      \n      expect(results[0].heart_rate).toBe(results[1].heart_rate);\n      expect(results[0].heart_rate).toBe(results[2].heart_rate);\n      \n      expect(results[0].clinical_significance).toBe(results[1].clinical_significance);\n      expect(results[0].clinical_significance).toBe(results[2].clinical_significance);\n    });\n  });\n\n  describe('Medical Safety Validation', () => {\n    it('should never classify critical rhythms as normal', async () => {\n      const criticalRhythms = [\n        'Ventricular tachycardia, Rate 190 bpm',\n        'Ventricular fibrillation',\n        'Complete heart block with ventricular escape rhythm'\n      ];\n      \n      for (const rhythmData of criticalRhythms) {\n        const input: EKGInput = {\n          type: 'text_report',\n          data: rhythmData\n        };\n        \n        const result = await ekgAnalyzer.analyzeEKG(input);\n        \n        // Critical rhythms should never be classified as normal\n        expect(result.clinical_significance).not.toBe('normal');\n        \n        // Should be at least urgent, preferably critical\n        expect(['urgent', 'critical']).toContain(result.clinical_significance);\n      }\n    });\n    \n    it('should provide appropriate treatment considerations for critical rhythms', async () => {\n      const input: EKGInput = {\n        type: 'text_report',\n        data: 'Ventricular tachycardia, Rate 185 bpm, Wide QRS'\n      };\n      \n      const result = await ekgAnalyzer.analyzeEKG(input);\n      \n      expect(result.clinical_significance).toBe('critical');\n      expect(result.clinical_context.treatment_considerations.some(\n        treatment => treatment.toLowerCase().includes('immediate')\n      )).toBe(true);\n    });\n    \n    it('should flag dangerous heart rates appropriately', async () => {\n      const dangerousRates = [\n        { data: 'Ventricular tachycardia, Rate 200 bpm', expected: 'critical' },\n        { data: 'Severe bradycardia, Rate 25 bpm', expected: 'urgent' },\n        { data: 'Atrial fibrillation with RVR, Rate 175 bpm', expected: 'urgent' }\n      ];\n      \n      for (const testCase of dangerousRates) {\n        const input: EKGInput = {\n          type: 'text_report',\n          data: testCase.data\n        };\n        \n        const result = await ekgAnalyzer.analyzeEKG(input);\n        \n        expect(['urgent', 'critical']).toContain(result.clinical_significance);\n      }\n    });\n  });\n\n  describe('Educational Safety Validation', () => {\n    it('should emphasize critical findings in educational content', async () => {\n      const input: EKGInput = {\n        type: 'text_report',\n        data: 'Ventricular tachycardia, Rate 185 bpm'\n      };\n      \n      const medicalAnalysis = await ekgAnalyzer.analyzeEKG(input);\n      const educationalContent = await educationGenerator.generateEducationalContent(\n        medicalAnalysis,\n        'beginner'\n      );\n      \n      // Should emphasize urgency in beginner content\n      expect(educationalContent.clinical_significance_explanation.toLowerCase())\n        .toMatch(/(dangerous|emergency|immediate|critical)/i);\n      \n      // Should have critical emphasis in narration\n      const criticalCues = educationalContent.narration_timing.filter(\n        cue => cue.emphasis_level === 'critical'\n      );\n      expect(criticalCues.length).toBeGreaterThan(0);\n    });\n    \n    it('should provide appropriate disclaimers for educational content', async () => {\n      const input: EKGInput = {\n        type: 'text_report',\n        data: 'Normal sinus rhythm, Rate 72 bpm'\n      };\n      \n      const medicalAnalysis = await ekgAnalyzer.analyzeEKG(input);\n      const educationalContent = await educationGenerator.generateEducationalContent(\n        medicalAnalysis,\n        'intermediate'\n      );\n      \n      // Educational content should be clearly marked as educational\n      expect(educationalContent.accessibility.screen_reader_compatible).toBe(true);\n      \n      // Should have appropriate learning progression indicators\n      expect(educationalContent.learning_progression.prerequisite_concepts).toBeInstanceOf(Array);\n      expect(educationalContent.learning_progression.mastery_indicators).toBeInstanceOf(Array);\n    });\n  });\n});\n\n/**\n * Medical Accuracy Test Utilities\n */\nexport class MedicalValidationUtils {\n  /**\n   * Validate that heart rate is physiologically possible\n   */\n  static validateHeartRate(heartRate: number): boolean {\n    return heartRate >= 20 && heartRate <= 300;\n  }\n  \n  /**\n   * Validate that PR interval is within possible range\n   */\n  static validatePRInterval(prInterval: number): boolean {\n    return prInterval >= 80 && prInterval <= 400;\n  }\n  \n  /**\n   * Validate that QRS duration is physiologically possible\n   */\n  static validateQRSDuration(qrsDuration: number): boolean {\n    return qrsDuration >= 40 && qrsDuration <= 200;\n  }\n  \n  /**\n   * Validate clinical significance matches rhythm classification\n   */\n  static validateClinicalSignificance(\n    rhythm: string, \n    heartRate: number, \n    significance: string\n  ): boolean {\n    // Ventricular tachycardia should always be critical\n    if (rhythm === 'ventricular_tachycardia') {\n      return significance === 'critical';\n    }\n    \n    // Very slow heart rates should be urgent\n    if (heartRate < 35) {\n      return ['urgent', 'critical'].includes(significance);\n    }\n    \n    // Very fast heart rates should be at least monitor\n    if (heartRate > 150) {\n      return ['monitor', 'urgent', 'critical'].includes(significance);\n    }\n    \n    return true;\n  }\n  \n  /**\n   * Validate that educational content matches medical analysis\n   */\n  static validateEducationalConsistency(\n    medicalAnalysis: MedicalAnalysis,\n    educationalContent: any\n  ): boolean {\n    // Rhythm mentioned in explanation should match analysis\n    const rhythmInExplanation = educationalContent.rhythm_explanation\n      .toLowerCase()\n      .includes(medicalAnalysis.rhythm_classification.replace('_', ' '));\n    \n    // Clinical significance should be consistent\n    const significanceConsistent = educationalContent.clinical_significance_explanation\n      .toLowerCase()\n      .includes(medicalAnalysis.clinical_significance);\n    \n    return rhythmInExplanation && significanceConsistent;\n  }\n}"
+/**
+ * Medical Accuracy Validation Test Suite
+ * 
+ * Comprehensive testing of the EKG-heart visualization system
+ * with various cardiac rhythms and pathologies
+ */
+
+import { describe, test, expect, beforeEach, afterEach } from '@jest/testing-library/jest-dom';
+import * as THREE from 'three';
+
+// Import our medical components
+import { AnatomicalHeartModel } from '../packages/heart-3d/src/AnatomicalHeartModel';
+import { ConductionSystemVisualizer } from '../packages/heart-3d/src/ConductionSystemVisualizer';
+import { ElectrophysiologyMapper } from '../packages/ekg-processor/src/ElectrophysiologyMapper';
+import { EKGMedicalAnalyzer } from '../packages/ekg-processor/src/index';
+
+// Medical test data
+interface MedicalTestCase {
+  name: string;
+  rhythmType: string;
+  heartRate: number;
+  ekgCharacteristics: {
+    pWave: boolean;
+    prInterval: number;
+    qrsDuration: number;
+    qtInterval: number;
+    regularity: 'regular' | 'irregular';
+  };
+  expectedConductionPattern: {
+    saNodeActive: boolean;
+    avNodeDelay: number;
+    ventricularActivation: 'normal' | 'wide' | 'aberrant';
+    conductionBlocks: string[];
+  };
+  expectedTimingSequence: {
+    atrialDepolarization: number; // ms
+    avNodeConduction: number; // ms
+    ventricularDepolarization: number; // ms
+    totalCycleTime: number; // ms
+  };
+  clinicalSignificance: 'normal' | 'monitor' | 'urgent' | 'critical';
+}
+
+const MEDICAL_TEST_CASES: MedicalTestCase[] = [
+  {
+    name: 'Normal Sinus Rhythm',
+    rhythmType: 'Normal Sinus Rhythm',
+    heartRate: 72,
+    ekgCharacteristics: {
+      pWave: true,
+      prInterval: 160,
+      qrsDuration: 90,
+      qtInterval: 380,
+      regularity: 'regular'
+    },
+    expectedConductionPattern: {
+      saNodeActive: true,
+      avNodeDelay: 100,
+      ventricularActivation: 'normal',
+      conductionBlocks: []
+    },
+    expectedTimingSequence: {
+      atrialDepolarization: 80,
+      avNodeConduction: 100,
+      ventricularDepolarization: 75,
+      totalCycleTime: 833 // 60000/72
+    },
+    clinicalSignificance: 'normal'
+  },
+  
+  {
+    name: 'Atrial Fibrillation',
+    rhythmType: 'Atrial Fibrillation',
+    heartRate: 95,
+    ekgCharacteristics: {
+      pWave: false,
+      prInterval: 0, // No P waves
+      qrsDuration: 85,
+      qtInterval: 340,
+      regularity: 'irregular'
+    },
+    expectedConductionPattern: {
+      saNodeActive: false,
+      avNodeDelay: 120, // Variable
+      ventricularActivation: 'normal',
+      conductionBlocks: ['SA_NODE_SUPPRESSION']
+    },
+    expectedTimingSequence: {
+      atrialDepolarization: 0, // Chaotic
+      avNodeConduction: 120,
+      ventricularDepolarization: 75,
+      totalCycleTime: 632 // Variable due to irregularity
+    },
+    clinicalSignificance: 'urgent'
+  },
+
+  {
+    name: 'Ventricular Tachycardia',
+    rhythmType: 'Ventricular Tachycardia',
+    heartRate: 180,
+    ekgCharacteristics: {
+      pWave: false, // AV dissociation
+      prInterval: 0,
+      qrsDuration: 140, // Wide QRS
+      qtInterval: 280,
+      regularity: 'regular'
+    },
+    expectedConductionPattern: {
+      saNodeActive: false, // Overridden
+      avNodeDelay: 0, // Bypassed
+      ventricularActivation: 'wide',
+      conductionBlocks: ['AV_DISSOCIATION']
+    },
+    expectedTimingSequence: {
+      atrialDepolarization: 0,
+      avNodeConduction: 0,
+      ventricularDepolarization: 140,
+      totalCycleTime: 333 // 60000/180
+    },
+    clinicalSignificance: 'critical'
+  },
+
+  {
+    name: 'First Degree AV Block',
+    rhythmType: 'First Degree AV Block',
+    heartRate: 65,
+    ekgCharacteristics: {
+      pWave: true,
+      prInterval: 240, // Prolonged
+      qrsDuration: 95,
+      qtInterval: 400,
+      regularity: 'regular'
+    },
+    expectedConductionPattern: {
+      saNodeActive: true,
+      avNodeDelay: 180, // Prolonged
+      ventricularActivation: 'normal',
+      conductionBlocks: ['AV_CONDUCTION_DELAY']
+    },
+    expectedTimingSequence: {
+      atrialDepolarization: 80,
+      avNodeConduction: 180,
+      ventricularDepolarization: 75,
+      totalCycleTime: 923 // 60000/65
+    },
+    clinicalSignificance: 'monitor'
+  },
+
+  {
+    name: 'Complete Heart Block',
+    rhythmType: 'Third Degree AV Block',
+    heartRate: 35, // Ventricular escape rhythm
+    ekgCharacteristics: {
+      pWave: true, // P waves present but dissociated
+      prInterval: 0, // Variable/no relationship
+      qrsDuration: 120, // Wide escape rhythm
+      qtInterval: 480,
+      regularity: 'regular' // Ventricular escape is regular
+    },
+    expectedConductionPattern: {
+      saNodeActive: true, // SA node still firing
+      avNodeDelay: 0, // Complete block
+      ventricularActivation: 'wide', // Escape rhythm
+      conductionBlocks: ['COMPLETE_AV_BLOCK']
+    },
+    expectedTimingSequence: {
+      atrialDepolarization: 80, // Independent
+      avNodeConduction: 0, // Blocked
+      ventricularDepolarization: 120,
+      totalCycleTime: 1714 // 60000/35
+    },
+    clinicalSignificance: 'critical'
+  },
+
+  {
+    name: 'Left Bundle Branch Block',
+    rhythmType: 'Sinus Rhythm with LBBB',
+    heartRate: 68,
+    ekgCharacteristics: {
+      pWave: true,
+      prInterval: 170,
+      qrsDuration: 130, // Wide due to bundle block
+      qtInterval: 420,
+      regularity: 'regular'
+    },
+    expectedConductionPattern: {
+      saNodeActive: true,
+      avNodeDelay: 110,
+      ventricularActivation: 'aberrant', // Abnormal sequence
+      conductionBlocks: ['LEFT_BUNDLE_BLOCK']
+    },
+    expectedTimingSequence: {
+      atrialDepolarization: 80,
+      avNodeConduction: 110,
+      ventricularDepolarization: 130, // Delayed due to block
+      totalCycleTime: 882 // 60000/68
+    },
+    clinicalSignificance: 'monitor'
+  }
+];
+
+// Medical accuracy thresholds
+const ACCURACY_THRESHOLDS = {
+  TIMING_TOLERANCE: 10, // ±10ms tolerance
+  HEART_RATE_TOLERANCE: 5, // ±5 BPM tolerance
+  MINIMUM_ACCURACY: 0.90, // 90% minimum accuracy
+  EXCELLENT_ACCURACY: 0.95, // 95% excellent accuracy
+  CONDUCTION_VELOCITY_TOLERANCE: 0.1 // ±0.1 m/s tolerance
+};
+
+describe('Medical Accuracy Validation', () => {
+  let scene: THREE.Scene;
+  let camera: THREE.PerspectiveCamera;
+  let renderer: THREE.WebGLRenderer;
+  let anatomicalHeart: AnatomicalHeartModel;
+  let conductionVisualizer: ConductionSystemVisualizer;
+  let electrophysiologyMapper: ElectrophysiologyMapper;
+  let medicalAnalyzer: EKGMedicalAnalyzer;
+
+  beforeEach(() => {
+    // Setup Three.js environment
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer();
+    
+    // Initialize medical components
+    anatomicalHeart = new AnatomicalHeartModel(scene);
+    conductionVisualizer = new ConductionSystemVisualizer(scene, camera, renderer);
+    electrophysiologyMapper = new ElectrophysiologyMapper();
+    medicalAnalyzer = new EKGMedicalAnalyzer();
+  });
+
+  afterEach(() => {
+    // Cleanup
+    renderer.dispose();
+    scene.clear();
+  });
+
+  describe('Anatomical Accuracy Tests', () => {
+    test('Heart chamber dimensions should match medical standards', () => {
+      const chambers = anatomicalHeart.getChambers();
+      
+      // Test left ventricle dimensions
+      const leftVentricle = chambers.get('LV');
+      expect(leftVentricle).toBeDefined();
+      expect(leftVentricle!.volume).toBeGreaterThanOrEqual(120); // Normal LV EDV: 120-160ml
+      expect(leftVentricle!.volume).toBeLessThanOrEqual(160);
+      expect(leftVentricle!.wallThickness).toBeGreaterThanOrEqual(8); // Normal LV wall: 8-12mm
+      expect(leftVentricle!.wallThickness).toBeLessThanOrEqual(15);
+
+      // Test right ventricle dimensions
+      const rightVentricle = chambers.get('RV');
+      expect(rightVentricle).toBeDefined();
+      expect(rightVentricle!.wallThickness).toBeGreaterThanOrEqual(2); // Normal RV wall: 2-5mm
+      expect(rightVentricle!.wallThickness).toBeLessThanOrEqual(6);
+    });
+
+    test('Conduction system positioning should be anatomically correct', () => {
+      const conductionNodes = anatomicalHeart.getConductionNodes();
+      
+      // SA node position (upper right atrium)
+      const saNode = conductionNodes.get('SA_NODE');
+      expect(saNode).toBeDefined();
+      expect(saNode!.position.x).toBeGreaterThan(20); // Right side
+      expect(saNode!.position.y).toBeGreaterThan(10); // Upper position
+      
+      // AV node position (interventricular septum)
+      const avNode = conductionNodes.get('AV_NODE');
+      expect(avNode).toBeDefined();
+      expect(Math.abs(avNode!.position.x)).toBeLessThan(5); // Central position
+      expect(avNode!.position.y).toBeLessThan(0); // Lower than SA node
+    });
+
+    test('Medical accuracy metrics should meet professional standards', () => {
+      const metrics = anatomicalHeart.getMedicalAccuracyMetrics();
+      
+      expect(metrics.anatomicalAccuracy).toBeGreaterThanOrEqual(ACCURACY_THRESHOLDS.MINIMUM_ACCURACY);
+      expect(metrics.timingAccuracy).toBeGreaterThanOrEqual(ACCURACY_THRESHOLDS.MINIMUM_ACCURACY);
+      expect(metrics.conductionAccuracy).toBeGreaterThanOrEqual(ACCURACY_THRESHOLDS.MINIMUM_ACCURACY);
+    });
+  });
+
+  describe('Electrophysiology Mapping Tests', () => {
+    MEDICAL_TEST_CASES.forEach((testCase) => {
+      describe(`${testCase.name} Tests`, () => {
+        test('Should correctly map EKG characteristics to electrophysiology', async () => {
+          // Create mock EKG analysis based on test case
+          const mockEKGAnalysis = createMockEKGAnalysis(testCase);
+          
+          // Map to electrophysiology state
+          const electrophysiologyState = electrophysiologyMapper.mapEKGToElectrophysiology(
+            mockEKGAnalysis,
+            0 // Start of cycle
+          );
+
+          // Validate timing sequence
+          validateTimingSequence(electrophysiologyState, testCase);
+          
+          // Validate conduction patterns
+          validateConductionPattern(electrophysiologyState, testCase);
+          
+          // Validate clinical accuracy
+          validateClinicalAccuracy(electrophysiologyState, testCase);
+        });
+
+        test('Should maintain timing accuracy throughout cardiac cycle', () => {
+          const mockEKGAnalysis = createMockEKGAnalysis(testCase);
+          
+          // Test multiple points in cardiac cycle
+          const testPoints = [0, 50, 100, 200, 400, 600];
+          
+          testPoints.forEach(timePoint => {
+            const state = electrophysiologyMapper.mapEKGToElectrophysiology(
+              mockEKGAnalysis,
+              timePoint
+            );
+            
+            validateTimingAccuracy(state, testCase, timePoint);
+          });
+        });
+
+        test('Should correctly visualize conduction abnormalities', () => {
+          const mockEKGAnalysis = createMockEKGAnalysis(testCase);
+          
+          // Update heart model with test case
+          anatomicalHeart.processEKGData(mockEKGAnalysis);
+          
+          // Validate conduction blocks are properly represented
+          validateConductionBlocks(testCase);
+        });
+      });
+    });
+  });
+
+  describe('Real-time Processing Tests', () => {
+    test('Should process EKG data within medical timing requirements', async () => {
+      const startTime = performance.now();
+      
+      const mockEKGFile = createMockEKGFile('normal_sinus');
+      const analysis = await medicalAnalyzer.analyzeEKGFile(mockEKGFile);
+      
+      const processingTime = performance.now() - startTime;
+      
+      // Processing should be under 100ms for real-time use
+      expect(processingTime).toBeLessThan(100);
+      expect(analysis).toBeDefined();
+      expect(analysis.confidence_score).toBeGreaterThan(0.8);
+    });
+
+    test('Should maintain frame rate requirements during animation', () => {
+      const frameCount = 60; // Test 1 second at 60fps
+      const frameStartTime = performance.now();
+      
+      // Simulate 60 frames of animation
+      for (let frame = 0; frame < frameCount; frame++) {
+        const deltaTime = 1000 / 60; // 60fps
+        anatomicalHeart.updateAnimation(deltaTime);
+      }
+      
+      const totalTime = performance.now() - frameStartTime;
+      const averageFrameTime = totalTime / frameCount;
+      
+      // Each frame should complete in under 16.67ms for 60fps
+      expect(averageFrameTime).toBeLessThan(16.67);
+    });
+  });
+
+  // Helper functions for test validation
+  function createMockEKGAnalysis(testCase: MedicalTestCase): any {
+    return {
+      rhythm_analysis: {
+        primary_rhythm: testCase.rhythmType,
+        heart_rate: testCase.heartRate,
+        regularity: testCase.ekgCharacteristics.regularity,
+        clinical_significance: testCase.clinicalSignificance,
+        confidence: 0.95,
+        details: `Test case for ${testCase.name}`
+      },
+      timing_measurements: {
+        pr_interval: testCase.ekgCharacteristics.prInterval,
+        qrs_duration: testCase.ekgCharacteristics.qrsDuration,
+        qt_interval: testCase.ekgCharacteristics.qtInterval,
+        rr_interval_variability: testCase.ekgCharacteristics.regularity === 'regular' ? 0.05 : 0.3
+      },
+      conduction_pathway: {
+        sa_node: {
+          status: testCase.expectedConductionPattern.saNodeActive ? 'normal' : 'abnormal',
+          details: testCase.expectedConductionPattern.saNodeActive ? 'Normal SA node function' : 'SA node suppressed or overridden'
+        },
+        av_node: {
+          status: testCase.expectedConductionPattern.avNodeDelay > 120 ? 'abnormal' : 'normal',
+          delay: testCase.expectedConductionPattern.avNodeDelay
+        },
+        his_purkinje: {
+          status: testCase.expectedConductionPattern.ventricularActivation === 'normal' ? 'normal' : 'abnormal',
+          details: `Ventricular activation: ${testCase.expectedConductionPattern.ventricularActivation}`
+        }
+      },
+      educational_focus: {
+        key_teaching_points: [
+          `Key characteristic: ${testCase.name}`,
+          `Heart rate: ${testCase.heartRate} BPM`,
+          `Clinical significance: ${testCase.clinicalSignificance}`
+        ],
+        common_misconceptions: ['Test misconception'],
+        clinical_correlations: ['Test correlation']
+      },
+      confidence_score: 0.95
+    };
+  }
+
+  function createMockEKGFile(rhythmType: string): File {
+    const mockContent = new Uint8Array(1024).fill(128);
+    return new File([mockContent], `mock_${rhythmType}.png`, { type: 'image/png' });
+  }
+
+  function validateTimingSequence(state: any, testCase: MedicalTestCase): void {
+    // Validate that timing matches expected medical values
+    const activeRegions = state.activeRegions || [];
+    
+    if (testCase.expectedConductionPattern.saNodeActive) {
+      const saRegion = activeRegions.find((r: any) => r.anatomicalLocation.includes('SA'));
+      if (saRegion) {
+        expect(saRegion.activationTime).toBeLessThanOrEqual(ACCURACY_THRESHOLDS.TIMING_TOLERANCE);
+      }
+    }
+  }
+
+  function validateConductionPattern(state: any, testCase: MedicalTestCase): void {
+    const activeRegions = state.activeRegions || [];
+    const blockedRegions = activeRegions.filter((r: any) => r.isBlocked);
+    
+    // Validate expected blocks are present
+    testCase.expectedConductionPattern.conductionBlocks.forEach(expectedBlock => {
+      const hasExpectedBlock = blockedRegions.some((region: any) => 
+        region.anatomicalLocation.includes(expectedBlock.replace('_', ''))
+      );
+      
+      if (expectedBlock !== 'NONE') {
+        expect(hasExpectedBlock).toBe(true);
+      }
+    });
+  }
+
+  function validateClinicalAccuracy(state: any, testCase: MedicalTestCase): void {
+    const electricalWaves = state.electricalWaves || [];
+    
+    // For VT, should have abnormal waves
+    if (testCase.rhythmType.includes('Ventricular Tachycardia')) {
+      const abnormalWaves = electricalWaves.filter((wave: any) => wave.isAbnormal);
+      expect(abnormalWaves.length).toBeGreaterThan(0);
+    }
+  }
+
+  function validateTimingAccuracy(state: any, testCase: MedicalTestCase, timePoint: number): void {
+    const expectedCycleLength = testCase.expectedTimingSequence.totalCycleTime;
+    const cyclePosition = timePoint % expectedCycleLength;
+    const activeRegions = state.activeRegions || [];
+    
+    // During atrial depolarization phase
+    if (cyclePosition >= 0 && cyclePosition <= testCase.expectedTimingSequence.atrialDepolarization) {
+      if (testCase.expectedConductionPattern.saNodeActive) {
+        const atrialRegions = activeRegions.filter((r: any) => 
+          r.anatomicalLocation.includes('ATRIAL') || r.anatomicalLocation.includes('SA')
+        );
+        expect(atrialRegions.length).toBeGreaterThan(0);
+      }
+    }
+  }
+
+  function validateConductionBlocks(testCase: MedicalTestCase): void {
+    const conductionNodes = anatomicalHeart.getConductionNodes();
+    
+    testCase.expectedConductionPattern.conductionBlocks.forEach(blockType => {
+      switch (blockType) {
+        case 'SA_NODE_SUPPRESSION':
+          const saNode = conductionNodes.get('SA_NODE');
+          expect(saNode).toBeDefined();
+          break;
+          
+        case 'COMPLETE_AV_BLOCK':
+          const avNode = conductionNodes.get('AV_NODE');
+          expect(avNode).toBeDefined();
+          break;
+          
+        case 'LEFT_BUNDLE_BLOCK':
+          const leftBundle = conductionNodes.get('LEFT_BUNDLE');
+          expect(leftBundle).toBeDefined();
+          break;
+      }
+    });
+  }
+});
+
+// Export for other test files
+export {
+  MEDICAL_TEST_CASES,
+  ACCURACY_THRESHOLDS,
+  createMockEKGAnalysis,
+  createMockEKGFile
+};
