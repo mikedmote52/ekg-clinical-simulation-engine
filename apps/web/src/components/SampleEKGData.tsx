@@ -19,7 +19,7 @@ interface SampleEKGData {
 const sampleData: SampleEKGData[] = [
   {
     name: "Normal Sinus Rhythm",
-    rhythm_classification: 'normal_sinus',
+    rhythm_classification: 'Normal Sinus Rhythm',
     heart_rate: 72,
     clinical_significance: 'normal',
     pathophysiology: "Normal sinus rhythm with coordinated electrical conduction from the SA node through the AV node to the ventricles, producing effective mechanical contractions.",
@@ -31,7 +31,7 @@ const sampleData: SampleEKGData[] = [
   },
   {
     name: "Atrial Fibrillation",
-    rhythm_classification: 'atrial_fibrillation',
+    rhythm_classification: 'Atrial Fibrillation',
     heart_rate: 110,
     clinical_significance: 'urgent',
     pathophysiology: "Chaotic electrical activity in the atria leads to irregular, rapid ventricular response. The atria quiver rather than contract effectively, reducing cardiac output and increasing stroke risk.",
@@ -43,7 +43,7 @@ const sampleData: SampleEKGData[] = [
   },
   {
     name: "Ventricular Tachycardia",
-    rhythm_classification: 'ventricular_tachycardia',
+    rhythm_classification: 'Ventricular Tachycardia',
     heart_rate: 180,
     clinical_significance: 'critical',
     pathophysiology: "Rapid ventricular rhythm originating from ectopic ventricular focus. Results in poor ventricular filling and decreased cardiac output, potentially leading to hemodynamic instability.",
@@ -55,7 +55,7 @@ const sampleData: SampleEKGData[] = [
   },
   {
     name: "Third Degree Heart Block",
-    rhythm_classification: 'heart_block',
+    rhythm_classification: 'First Degree AV Block',
     heart_rate: 35,
     clinical_significance: 'urgent',
     pathophysiology: "Complete dissociation between atrial and ventricular activity. AV node fails to conduct impulses, leading to independent atrial and ventricular rhythms with slow ventricular escape.",
@@ -67,7 +67,7 @@ const sampleData: SampleEKGData[] = [
   },
   {
     name: "Sinus Bradycardia",
-    rhythm_classification: 'sinus_bradycardia',
+    rhythm_classification: 'Sinus Bradycardia',
     heart_rate: 45,
     clinical_significance: 'monitor',
     pathophysiology: "Normal sinus rhythm but with slow rate. May be physiological (athletes) or pathological (medications, hypothyroidism, increased ICP).",

@@ -1,0 +1,464 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "3D Heart Visualization Animation Parameters",
+  "description": "JSON format for EKG-synchronized 3D heart animation parameters as specified in the requirements",
+  "type": "object",
+  "required": [
+    "electrical_sequence",
+    "mechanical_sequence", 
+    "educational_highlights",
+    "camera_choreography"
+  ],
+  "properties": {
+    "electrical_sequence": {
+      "type": "object",
+      "description": "Timing and visualization of cardiac electrical conduction",
+      "required": [
+        "sa_node_activation",
+        "atrial_depolarization", 
+        "av_node_delay",
+        "ventricular_depolarization"
+      ],
+      "properties": {
+        "sa_node_activation": {
+          "type": "object",
+          "description": "SA node (sinoatrial node) activation parameters",
+          "properties": {
+            "timing": {
+              "type": "number",
+              "description": "Time in milliseconds from cycle start",
+              "minimum": 0
+            },
+            "visualization": {
+              "type": "string",
+              "description": "Visual effect type for SA node activation",
+              "enum": ["pulse", "glow", "flash", "wave"]
+            },
+            "duration": {
+              "type": "number", 
+              "description": "Duration of SA node activation in milliseconds",
+              "minimum": 10,
+              "maximum": 100
+            }
+          }
+        },
+        "atrial_depolarization": {
+          "type": "object",
+          "description": "Atrial electrical spreading (P-wave)",
+          "properties": {
+            "wave_speed": {
+              "type": "number",
+              "description": "Speed of electrical wave propagation in mm/ms",
+              "minimum": 0.5,
+              "maximum": 2.0
+            },
+            "propagation_pattern": {
+              "type": "string",
+              "description": "Pattern of atrial depolarization spread",
+              "enum": ["radial", "directional", "sequential"]
+            },
+            "completion_time": {
+              "type": "number",
+              "description": "Total time for atrial depolarization in milliseconds", 
+              "minimum": 60,
+              "maximum": 120
+            }
+          }
+        },
+        "av_node_delay": {
+          "type": "object",
+          "description": "AV node conduction delay",
+          "properties": {
+            "delay_duration": {
+              "type": "number",
+              "description": "AV node delay in milliseconds (PR interval - P wave duration)",
+              "minimum": 50,
+              "maximum": 300
+            },
+            "visualization": {
+              "type": "string",
+              "description": "Visual representation of AV delay",
+              "enum": ["pause", "slow_pulse", "dimming", "color_shift"]
+            },
+            "educational_emphasis": {
+              "type": "boolean",
+              "description": "Whether to highlight AV delay for educational purposes"
+            }
+          }
+        },
+        "ventricular_depolarization": {
+          "type": "object", 
+          "description": "Ventricular electrical activation (QRS complex)",
+          "properties": {
+            "his_bundle_speed": {
+              "type": "number",
+              "description": "Conduction speed through Bundle of His in mm/ms",
+              "minimum": 1.0,
+              "maximum": 4.0
+            },
+            "purkinje_propagation": {
+              "type": "string",
+              "description": "Purkinje fiber network activation speed",
+              "enum": ["rapid", "normal", "slow", "blocked"]
+            },
+            "septum_to_wall_timing": {
+              "type": "number",
+              "description": "Time from septal to ventricular wall activation in milliseconds",
+              "minimum": 20,
+              "maximum": 80
+            }
+          }
+        }
+      }
+    },
+    "mechanical_sequence": {
+      "type": "object",
+      "description": "Cardiac chamber mechanical contraction sequence",
+      "required": [
+        "atrial_contraction",
+        "ventricular_contraction",
+        "valve_function"
+      ],
+      "properties": {
+        "atrial_contraction": {
+          "type": "object",
+          "description": "Atrial systole parameters",
+          "properties": {
+            "onset_delay": {
+              "type": "number",
+              "description": "Delay from P-wave to mechanical contraction in milliseconds",
+              "minimum": 20,
+              "maximum": 100
+            },
+            "contraction_strength": {
+              "type": "string",
+              "description": "Strength of atrial contraction",
+              "enum": ["weak", "normal", "strong", "absent"]
+            },
+            "coordination": {
+              "type": "string", 
+              "description": "Coordination between right and left atria",
+              "enum": ["synchronized", "asynchronous", "chaotic"]
+            }
+          }
+        },
+        "ventricular_contraction": {
+          "type": "object",
+          "description": "Ventricular systole parameters",
+          "properties": {
+            "onset_timing": {
+              "type": "number",
+              "description": "Time from QRS onset to mechanical contraction in milliseconds",
+              "minimum": 30,
+              "maximum": 120
+            },
+            "systolic_pressure": {
+              "type": "number",
+              "description": "Peak systolic pressure generation (arbitrary units)",
+              "minimum": 0.1,
+              "maximum": 2.0
+            },
+            "wall_motion": {
+              "type": "string",
+              "description": "Type of ventricular wall motion",
+              "enum": ["normal", "hypokinetic", "akinetic", "dyskinetic"]
+            },
+            "coordination": {
+              "type": "string",
+              "description": "Interventricular coordination",
+              "enum": ["synchronized", "dyssynchronous", "independent"]
+            }
+          }
+        },
+        "valve_function": {
+          "type": "object",
+          "description": "Cardiac valve operation timing",
+          "properties": {
+            "tricuspid": {
+              "type": "object",
+              "properties": {
+                "timing": {
+                  "type": "number",
+                  "description": "Valve closure timing relative to ventricular systole"
+                },
+                "function": {
+                  "type": "string",
+                  "enum": ["normal", "stenotic", "regurgitant", "incompetent"]
+                }
+              }
+            },
+            "pulmonary": {
+              "type": "object",
+              "properties": {
+                "timing": {
+                  "type": "number",
+                  "description": "Valve opening timing relative to ventricular systole"
+                },
+                "function": {
+                  "type": "string", 
+                  "enum": ["normal", "stenotic", "regurgitant", "incompetent"]
+                }
+              }
+            },
+            "mitral": {
+              "type": "object",
+              "properties": {
+                "timing": {
+                  "type": "number",
+                  "description": "Valve closure timing relative to ventricular systole"
+                },
+                "function": {
+                  "type": "string",
+                  "enum": ["normal", "stenotic", "regurgitant", "incompetent"]
+                }
+              }
+            },
+            "aortic": {
+              "type": "object", 
+              "properties": {
+                "timing": {
+                  "type": "number",
+                  "description": "Valve opening timing relative to ventricular systole"
+                },
+                "function": {
+                  "type": "string",
+                  "enum": ["normal", "stenotic", "regurgitant", "incompetent"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "educational_highlights": {
+      "type": "object",
+      "description": "Educational visualization emphasis areas",
+      "required": [
+        "key_areas_to_emphasize",
+        "pathology_visualization", 
+        "learning_sequence",
+        "interactive_elements"
+      ],
+      "properties": {
+        "key_areas_to_emphasize": {
+          "type": "array",
+          "description": "Anatomical areas to highlight for educational focus",
+          "items": {
+            "type": "string",
+            "enum": [
+              "sa_node",
+              "av_node", 
+              "bundle_of_his",
+              "purkinje_fibers",
+              "atrial_septum",
+              "ventricular_septum",
+              "coronary_arteries",
+              "valve_function"
+            ]
+          }
+        },
+        "pathology_visualization": {
+          "type": "array",
+          "description": "Specific pathological conditions to visualize",
+          "items": {
+            "type": "string",
+            "enum": [
+              "atrial_fibrillation",
+              "ventricular_tachycardia",
+              "heart_block",
+              "bundle_branch_block",
+              "myocardial_infarction",
+              "valve_stenosis",
+              "valve_regurgitation"
+            ]
+          }
+        },
+        "learning_sequence": {
+          "type": "array",
+          "description": "Progressive sequence of educational concepts to present",
+          "items": {
+            "type": "string",
+            "enum": [
+              "normal_anatomy",
+              "electrical_system",
+              "mechanical_function", 
+              "pathophysiology",
+              "clinical_correlation"
+            ]
+          }
+        },
+        "interactive_elements": {
+          "type": "array",
+          "description": "Interactive features to enable for learning",
+          "items": {
+            "type": "string", 
+            "enum": [
+              "chamber_isolation",
+              "conduction_tracing",
+              "timing_controls",
+              "cutaway_views",
+              "comparative_analysis",
+              "quiz_integration"
+            ]
+          }
+        }
+      }
+    },
+    "camera_choreography": {
+      "type": "object",
+      "description": "Camera movement and positioning for optimal educational viewing",
+      "required": [
+        "initial_view",
+        "zoom_sequence",
+        "rotation_timing", 
+        "educational_callouts"
+      ],
+      "properties": {
+        "initial_view": {
+          "type": "string",
+          "description": "Starting camera position for visualization",
+          "enum": [
+            "anterior",
+            "posterior", 
+            "left_lateral",
+            "right_lateral",
+            "superior",
+            "inferior",
+            "electrical_system_focus"
+          ]
+        },
+        "zoom_sequence": {
+          "type": "array",
+          "description": "Sequence of zoom levels and timing",
+          "items": {
+            "type": "object",
+            "properties": {
+              "zoom_level": {
+                "type": "number",
+                "description": "Camera zoom level (1.0 = default)",
+                "minimum": 0.5,
+                "maximum": 5.0
+              },
+              "duration": {
+                "type": "number",
+                "description": "Duration at this zoom level in seconds"
+              },
+              "focus_area": {
+                "type": "string", 
+                "description": "Anatomical area to focus on"
+              }
+            }
+          }
+        },
+        "rotation_timing": {
+          "type": "string",
+          "description": "Camera rotation synchronization with cardiac cycle",
+          "enum": [
+            "static",
+            "cardiac_synchronized", 
+            "continuous_rotation",
+            "educational_sequence",
+            "user_controlled"
+          ]
+        },
+        "educational_callouts": {
+          "type": "array",
+          "description": "Timed educational annotations and callouts",
+          "items": {
+            "type": "object",
+            "properties": {
+              "timing": {
+                "type": "number",
+                "description": "Time in cardiac cycle to show callout (0-1)"
+              },
+              "content": {
+                "type": "string",
+                "description": "Educational content to display"
+              },
+              "position": {
+                "type": "object", 
+                "description": "3D position for callout display",
+                "properties": {
+                  "x": {"type": "number"},
+                  "y": {"type": "number"}, 
+                  "z": {"type": "number"}
+                }
+              },
+              "duration": {
+                "type": "number",
+                "description": "Duration to display callout in seconds"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "electrical_sequence": {
+        "sa_node_activation": {
+          "timing": 0,
+          "visualization": "pulse",
+          "duration": 50
+        },
+        "atrial_depolarization": {
+          "wave_speed": 1.2,
+          "propagation_pattern": "radial",
+          "completion_time": 80
+        },
+        "av_node_delay": {
+          "delay_duration": 80,
+          "visualization": "pause",
+          "educational_emphasis": true
+        },
+        "ventricular_depolarization": {
+          "his_bundle_speed": 3.0,
+          "purkinje_propagation": "rapid", 
+          "septum_to_wall_timing": 40
+        }
+      },
+      "mechanical_sequence": {
+        "atrial_contraction": {
+          "onset_delay": 50,
+          "contraction_strength": "normal",
+          "coordination": "synchronized"
+        },
+        "ventricular_contraction": {
+          "onset_timing": 160,
+          "systolic_pressure": 1.0,
+          "wall_motion": "normal",
+          "coordination": "synchronized"
+        },
+        "valve_function": {
+          "tricuspid": {"timing": 160, "function": "normal"},
+          "pulmonary": {"timing": 180, "function": "normal"},
+          "mitral": {"timing": 160, "function": "normal"},
+          "aortic": {"timing": 180, "function": "normal"}
+        }
+      },
+      "educational_highlights": {
+        "key_areas_to_emphasize": ["sa_node", "av_node", "purkinje_fibers"],
+        "pathology_visualization": [],
+        "learning_sequence": ["normal_anatomy", "electrical_system", "mechanical_function"],
+        "interactive_elements": ["conduction_tracing", "timing_controls"]
+      },
+      "camera_choreography": {
+        "initial_view": "anterior",
+        "zoom_sequence": [
+          {"zoom_level": 1.0, "duration": 2.0, "focus_area": "whole_heart"},
+          {"zoom_level": 1.5, "duration": 3.0, "focus_area": "conduction_system"}
+        ],
+        "rotation_timing": "cardiac_synchronized",
+        "educational_callouts": [
+          {
+            "timing": 0.0,
+            "content": "SA node initiates heartbeat",
+            "position": {"x": 1.8, "y": 2.2, "z": 0.1},
+            "duration": 2.0
+          }
+        ]
+      }
+    }
+  ]
+}
