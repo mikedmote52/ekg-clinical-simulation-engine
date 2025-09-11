@@ -5,6 +5,7 @@ import { Heart, Upload, Play, Pause, BookOpen, Settings, Activity, TrendingUp, B
 import Advanced3DHeartVisualization from '../components/Advanced3DHeartVisualization';
 import SampleEKGDataSelector from '../components/SampleEKGData';
 import EKGTestDemo from '../components/EKGTestDemo';
+import SimpleHeartTest from '../components/SimpleHeartTest';
 import { ekgAnalyzer, EKGAnalysisResult } from '../lib/ekgAnalysis';
 
 // Real EKG Analysis Function using comprehensive medical analysis engine
@@ -350,6 +351,9 @@ export default function EKGEducationalPlatform() {
                       }}
                       onVisualizationStateChange={(state) => {
                         console.log('Visualization state changed:', state);
+                        if (state.isPlaying !== undefined) {
+                          setIsPlaying(state.isPlaying); // Sync main play state with 3D visualization
+                        }
                       }}
                       onMedicalHighlight={(finding, active) => {
                         console.log(`Medical finding ${finding} highlighted:`, active);
@@ -512,6 +516,9 @@ export default function EKGEducationalPlatform() {
                 </div>
               </div>
             </div>
+            
+            {/* 3D Rendering Test Panel */}
+            <SimpleHeartTest />
             
             {/* EKG Analysis Testing Panel */}
             <EKGTestDemo />

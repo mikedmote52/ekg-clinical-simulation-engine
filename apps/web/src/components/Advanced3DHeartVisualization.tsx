@@ -110,9 +110,9 @@ export const Advanced3DHeartVisualization: React.FC<Advanced3DHeartVisualization
   const conductionSystemRef = useRef<ConductionSystem>();
   const coronaryArteriesRef = useRef<CoronaryArteries>();
   
-  // Animation state
+  // Animation state - START PLAYING BY DEFAULT
   const [controls, setControls] = useState({
-    isPlaying: false,
+    isPlaying: true, // Start animation by default to show heart beating
     animationSpeed: 1.0,
     currentViewpoint: 'Anterior View',
     labelsVisible: true,
@@ -187,10 +187,32 @@ export const Advanced3DHeartVisualization: React.FC<Advanced3DHeartVisualization
   }, [medicalData]);
 
   /**
-   * Initialize Three.js scene with anatomically accurate heart model
+   * Check WebGL support and initialize Three.js scene with anatomically accurate heart model
    */
   const initializeScene = useCallback(() => {
-    if (!mountRef.current) return;
+    if (!mountRef.current) {
+      console.error('❌ Mount reference not available');
+      return;
+    }
+
+    // Check WebGL support
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    if (!gl) {
+      console.error('❌ WebGL not supported');
+      // Create fallback div with message
+      const fallbackDiv = document.createElement('div');
+      fallbackDiv.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #1a1a2e; color: white; flex-direction: column;">
+          <h3>WebGL Not Supported</h3>
+          <p>Please update your browser or enable hardware acceleration</p>
+        </div>
+      `;
+      mountRef.current.appendChild(fallbackDiv);
+      return;
+    }
+
+    console.log('✅ WebGL supported, initializing 3D scene');
 
     // Scene setup
     const scene = new THREE.Scene();
@@ -207,37 +229,71 @@ export const Advanced3DHeartVisualization: React.FC<Advanced3DHeartVisualization
     camera.position.set(0, 0, 15);
     cameraRef.current = camera;
 
-    // Renderer setup
-    const renderer = new THREE.WebGLRenderer({ 
-      antialias: true, 
-      alpha: true,
-      powerPreference: "high-performance"
-    });
-    renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
-    rendererRef.current = renderer;
+    // Renderer setup with error handling
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ 
+        antialias: true, 
+        alpha: true,
+        powerPreference: "high-performance"
+      });
+      renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.2;
+      rendererRef.current = renderer;
+      
+      console.log('✅ WebGL renderer created successfully');
+    } catch (error) {
+      console.error('❌ Error creating WebGL renderer:', error);
+      // Fallback to basic renderer
+      renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true });
+      renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
+      rendererRef.current = renderer;
+      console.log('⚠️ Using fallback renderer');
+    }
     
     mountRef.current.appendChild(renderer.domElement);
 
     // Lighting setup for anatomical visualization
     setupLighting(scene);
 
-    // Create heart anatomy
-    const heartGroup = createHeartAnatomy();
-    scene.add(heartGroup);
-    heartGroupRef.current = heartGroup;
+    // Create heart anatomy with error handling
+    try {
+      const heartGroup = createHeartAnatomy();
+      scene.add(heartGroup);
+      heartGroupRef.current = heartGroup;
+      console.log('✅ Heart group added to scene');
 
-    // Create conduction system
-    const conductionSystem = createConductionSystem();
-    heartGroup.add(conductionSystem);
+      // Create conduction system
+      try {
+        const conductionSystem = createConductionSystem();
+        heartGroup.add(conductionSystem);
+        console.log('✅ Conduction system added');
+      } catch (error) {
+        console.warn('⚠️ Conduction system creation failed:', error);
+      }
 
-    // Create coronary arteries
-    const coronaryArteries = createCoronaryArteries();
-    heartGroup.add(coronaryArteries);
+      // Create coronary arteries
+      try {
+        const coronaryArteries = createCoronaryArteries();
+        heartGroup.add(coronaryArteries);
+        console.log('✅ Coronary arteries added');
+      } catch (error) {
+        console.warn('⚠️ Coronary arteries creation failed:', error);
+      }
+    } catch (error) {
+      console.error('❌ Critical error creating heart anatomy:', error);
+      // Create minimal visible heart as last resort
+      const emergencyHeart = new THREE.Mesh(
+        new THREE.SphereGeometry(3, 12, 8),
+        new THREE.MeshBasicMaterial({ color: 0xFF0000, wireframe: true })
+      );
+      scene.add(emergencyHeart);
+      console.log('🚨 Emergency heart created');
+    }
 
     // Start animation loop
     startAnimationLoop();
@@ -269,122 +325,238 @@ export const Advanced3DHeartVisualization: React.FC<Advanced3DHeartVisualization
    * Setup anatomically accurate lighting for medical visualization
    */
   const setupLighting = (scene: THREE.Scene) => {
-    // Ambient light for overall visibility
-    const ambientLight = new THREE.AmbientLight(0x404060, 0.4);
-    scene.add(ambientLight);
+    console.log('💡 Setting up scene lighting...');
+    
+    try {
+      // Ambient light for overall visibility - BRIGHTER
+      const ambientLight = new THREE.AmbientLight(0x404060, 0.6); // Increased intensity
+      scene.add(ambientLight);
+      console.log('✅ Ambient light added');
 
-    // Main directional light (simulating operating room lighting)
-    const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
-    mainLight.position.set(10, 10, 5);
-    mainLight.castShadow = true;
-    mainLight.shadow.mapSize.width = 2048;
-    mainLight.shadow.mapSize.height = 2048;
-    scene.add(mainLight);
+      // Main directional light (simulating operating room lighting) - BRIGHTER
+      const mainLight = new THREE.DirectionalLight(0xffffff, 1.5); // Increased intensity
+      mainLight.position.set(10, 10, 5);
+      mainLight.castShadow = true;
+      mainLight.shadow.mapSize.width = 2048;
+      mainLight.shadow.mapSize.height = 2048;
+      scene.add(mainLight);
+      console.log('✅ Main directional light added');
 
-    // Fill light from opposite side
-    const fillLight = new THREE.DirectionalLight(0x8bb5ff, 0.3);
-    fillLight.position.set(-8, 5, -3);
-    scene.add(fillLight);
+      // Fill light from opposite side
+      const fillLight = new THREE.DirectionalLight(0x8bb5ff, 0.5); // Increased intensity
+      fillLight.position.set(-8, 5, -3);
+      scene.add(fillLight);
+      console.log('✅ Fill light added');
 
-    // Rim light for depth
-    const rimLight = new THREE.DirectionalLight(0xff9580, 0.2);
-    rimLight.position.set(0, -10, -5);
-    scene.add(rimLight);
+      // Rim light for depth
+      const rimLight = new THREE.DirectionalLight(0xff9580, 0.3); // Increased intensity
+      rimLight.position.set(0, -10, -5);
+      scene.add(rimLight);
+      console.log('✅ Rim light added');
 
-    // Point light for electrical activity highlighting
-    const electricalLight = new THREE.PointLight(0x00ffff, 0.5, 10);
-    electricalLight.position.set(0, 2, 0);
-    scene.add(electricalLight);
+      // Point light for electrical activity highlighting
+      const electricalLight = new THREE.PointLight(0x00ffff, 0.8, 15); // Increased intensity and range
+      electricalLight.position.set(0, 2, 0);
+      scene.add(electricalLight);
+      console.log('✅ Electrical point light added');
+
+      // Additional front light for better visibility
+      const frontLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      frontLight.position.set(0, 0, 10);
+      scene.add(frontLight);
+      console.log('✅ Front light added');
+      
+      console.log('✅ All lighting setup complete - 6 lights total');
+    } catch (error) {
+      console.error('❌ Error setting up lighting:', error);
+    }
   };
 
   /**
-   * Create anatomically accurate 3D heart geometry
+   * Create anatomically accurate 3D heart geometry with error handling
    */
   const createHeartAnatomy = (): THREE.Group => {
     const heartGroup = new THREE.Group();
 
-    // Heart chambers with anatomically correct proportions
-    const chambers = createHeartChambers();
-    const vessels = createMajorVessels();
-    const septum = createInterventricularSeptum();
+    try {
+      // Heart chambers with anatomically correct proportions
+      const chambers = createHeartChambers();
+      const vessels = createMajorVessels();
+      const septum = createInterventricularSeptum();
 
-    Object.values(chambers).forEach(chamber => heartGroup.add(chamber));
-    Object.values(vessels).forEach(vessel => {
-      if (Array.isArray(vessel)) {
-        vessel.forEach(v => heartGroup.add(v));
-      } else {
-        heartGroup.add(vessel);
+      Object.values(chambers).forEach(chamber => {
+        if (chamber && chamber.geometry && chamber.material) {
+          heartGroup.add(chamber);
+        }
+      });
+      
+      Object.values(vessels).forEach(vessel => {
+        if (Array.isArray(vessel)) {
+          vessel.forEach(v => {
+            if (v && v.geometry && v.material) {
+              heartGroup.add(v);
+            }
+          });
+        } else {
+          if (vessel && vessel.geometry && vessel.material) {
+            heartGroup.add(vessel);
+          }
+        }
+      });
+      
+      if (septum && septum.geometry && septum.material) {
+        heartGroup.add(septum);
       }
-    });
-    heartGroup.add(septum);
 
-    heartGeometryRef.current = {
-      ...chambers,
-      interventricularSeptum: septum,
-      ...vessels
-    };
+      heartGeometryRef.current = {
+        ...chambers,
+        interventricularSeptum: septum,
+        ...vessels
+      };
+      
+      console.log('✅ Heart anatomy created successfully with', heartGroup.children.length, 'components');
+    } catch (error) {
+      console.error('❌ Error creating heart anatomy:', error);
+      // Create simple fallback heart
+      const fallbackHeart = createFallbackHeart();
+      heartGroup.add(fallbackHeart);
+    }
 
     return heartGroup;
   };
 
   /**
-   * Create anatomically correct heart chambers
+   * Create simple fallback heart if complex geometry fails
    */
-  const createHeartChambers = () => {
-    // Right Atrium - thin-walled, receives venous blood
-    const rightAtriumGeometry = new THREE.SphereGeometry(1.2, 16, 12);
-    rightAtriumGeometry.scale(1.1, 0.8, 0.9); // Flatten slightly
-    const rightAtriumMaterial = new THREE.MeshPhongMaterial({
-      color: 0x8B4B8B,
-      transparent: true,
-      opacity: 0.85,
-      shininess: 30
-    });
-    const rightAtrium = new THREE.Mesh(rightAtriumGeometry, rightAtriumMaterial);
-    rightAtrium.position.set(1.5, 1.8, 0);
-
-    // Left Atrium - slightly larger, receives oxygenated blood
-    const leftAtriumGeometry = new THREE.SphereGeometry(1.3, 16, 12);
-    leftAtriumGeometry.scale(1.0, 0.8, 0.9);
-    const leftAtriumMaterial = new THREE.MeshPhongMaterial({
-      color: 0xFF6B6B,
-      transparent: true,
-      opacity: 0.85,
-      shininess: 30
-    });
-    const leftAtrium = new THREE.Mesh(leftAtriumGeometry, leftAtriumMaterial);
-    leftAtrium.position.set(-1.5, 1.8, 0);
-
-    // Right Ventricle - crescent-shaped, thinner walls
-    const rightVentricleGeometry = new THREE.SphereGeometry(1.6, 20, 16);
-    rightVentricleGeometry.scale(0.8, 1.2, 1.1);
-    const rightVentricleMaterial = new THREE.MeshPhongMaterial({
-      color: 0x5B5BAF,
-      transparent: true,
-      opacity: 0.9,
-      shininess: 40
-    });
-    const rightVentricle = new THREE.Mesh(rightVentricleGeometry, rightVentricleMaterial);
-    rightVentricle.position.set(1.2, -0.8, 0.3);
-
-    // Left Ventricle - muscular, main pumping chamber
-    const leftVentricleGeometry = new THREE.SphereGeometry(1.8, 24, 18);
-    leftVentricleGeometry.scale(1.0, 1.4, 1.0);
-    const leftVentricleMaterial = new THREE.MeshPhongMaterial({
+  const createFallbackHeart = (): THREE.Mesh => {
+    const geometry = new THREE.SphereGeometry(2, 16, 12);
+    geometry.scale(1.2, 1.5, 1.0); // Heart-like shape
+    
+    const material = new THREE.MeshPhongMaterial({
       color: 0xFF4444,
       transparent: true,
       opacity: 0.9,
       shininess: 50
     });
-    const leftVentricle = new THREE.Mesh(leftVentricleGeometry, leftVentricleMaterial);
-    leftVentricle.position.set(-1.0, -0.8, 0);
+    
+    const fallbackHeart = new THREE.Mesh(geometry, material);
+    console.log('💙 Created fallback heart geometry');
+    return fallbackHeart;
+  };
 
-    return {
-      rightAtrium,
-      leftAtrium,
-      rightVentricle,
-      leftVentricle
-    };
+  /**
+   * Create anatomically correct heart chambers with robust error handling
+   */
+  const createHeartChambers = () => {
+    console.log('🫀 Creating heart chambers...');
+    
+    try {
+      // Right Atrium - thin-walled, receives venous blood
+      const rightAtriumGeometry = new THREE.SphereGeometry(1.2, 16, 12);
+      rightAtriumGeometry.scale(1.1, 0.8, 0.9); // Flatten slightly
+      const rightAtriumMaterial = new THREE.MeshPhongMaterial({
+        color: 0x8B4B8B,
+        transparent: true,
+        opacity: 0.85,
+        shininess: 30,
+        side: THREE.DoubleSide  // Ensure visibility from all angles
+      });
+      const rightAtrium = new THREE.Mesh(rightAtriumGeometry, rightAtriumMaterial);
+      rightAtrium.position.set(1.5, 1.8, 0);
+      rightAtrium.castShadow = true;
+      rightAtrium.receiveShadow = true;
+      console.log('✅ Right atrium created');
+
+      // Left Atrium - slightly larger, receives oxygenated blood
+      const leftAtriumGeometry = new THREE.SphereGeometry(1.3, 16, 12);
+      leftAtriumGeometry.scale(1.0, 0.8, 0.9);
+      const leftAtriumMaterial = new THREE.MeshPhongMaterial({
+        color: 0xFF6B6B,
+        transparent: true,
+        opacity: 0.85,
+        shininess: 30,
+        side: THREE.DoubleSide
+      });
+      const leftAtrium = new THREE.Mesh(leftAtriumGeometry, leftAtriumMaterial);
+      leftAtrium.position.set(-1.5, 1.8, 0);
+      leftAtrium.castShadow = true;
+      leftAtrium.receiveShadow = true;
+      console.log('✅ Left atrium created');
+
+      // Right Ventricle - crescent-shaped, thinner walls
+      const rightVentricleGeometry = new THREE.SphereGeometry(1.6, 20, 16);
+      rightVentricleGeometry.scale(0.8, 1.2, 1.1);
+      const rightVentricleMaterial = new THREE.MeshPhongMaterial({
+        color: 0x5B5BAF,
+        transparent: true,
+        opacity: 0.9,
+        shininess: 40,
+        side: THREE.DoubleSide
+      });
+      const rightVentricle = new THREE.Mesh(rightVentricleGeometry, rightVentricleMaterial);
+      rightVentricle.position.set(1.2, -0.8, 0.3);
+      rightVentricle.castShadow = true;
+      rightVentricle.receiveShadow = true;
+      console.log('✅ Right ventricle created');
+
+      // Left Ventricle - muscular, main pumping chamber
+      const leftVentricleGeometry = new THREE.SphereGeometry(1.8, 24, 18);
+      leftVentricleGeometry.scale(1.0, 1.4, 1.0);
+      const leftVentricleMaterial = new THREE.MeshPhongMaterial({
+        color: 0xFF4444,
+        transparent: true,
+        opacity: 0.9,
+        shininess: 50,
+        side: THREE.DoubleSide
+      });
+      const leftVentricle = new THREE.Mesh(leftVentricleGeometry, leftVentricleMaterial);
+      leftVentricle.position.set(-1.0, -0.8, 0);
+      leftVentricle.castShadow = true;
+      leftVentricle.receiveShadow = true;
+      console.log('✅ Left ventricle created');
+
+      const chambers = {
+        rightAtrium,
+        leftAtrium,
+        rightVentricle,
+        leftVentricle
+      };
+      
+      console.log('✅ All heart chambers created successfully');
+      return chambers;
+      
+    } catch (error) {
+      console.error('❌ Error creating heart chambers:', error);
+      
+      // Create simple fallback chambers
+      const fallbackMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xFF4444,
+        transparent: true,
+        opacity: 0.8,
+        wireframe: true
+      });
+      
+      const chamber1 = new THREE.Mesh(new THREE.SphereGeometry(1.5, 8, 6), fallbackMaterial);
+      chamber1.position.set(-1, 1, 0);
+      
+      const chamber2 = new THREE.Mesh(new THREE.SphereGeometry(1.5, 8, 6), fallbackMaterial);
+      chamber2.position.set(1, 1, 0);
+      
+      const chamber3 = new THREE.Mesh(new THREE.SphereGeometry(1.8, 8, 6), fallbackMaterial);
+      chamber3.position.set(-1, -1, 0);
+      
+      const chamber4 = new THREE.Mesh(new THREE.SphereGeometry(1.8, 8, 6), fallbackMaterial);
+      chamber4.position.set(1, -1, 0);
+      
+      console.log('⚠️ Created fallback heart chambers');
+      
+      return {
+        rightAtrium: chamber2,
+        leftAtrium: chamber1,
+        rightVentricle: chamber4,
+        leftVentricle: chamber3
+      };
+    }
   };
 
   /**
@@ -674,33 +846,33 @@ export const Advanced3DHeartVisualization: React.FC<Advanced3DHeartVisualization
   };
 
   /**
-   * Start the main animation loop with EKG synchronization
+   * Start the main animation loop with EKG synchronization - ALWAYS RENDER
    */
   const startAnimationLoop = () => {
     const animate = () => {
-      if (!controls.isPlaying) {
-        animationFrameRef.current = requestAnimationFrame(animate);
-        return;
-      }
-
+      // ALWAYS RENDER - don't skip frames when paused to ensure visibility
       const currentTime = Date.now();
       const deltaTime = currentTime - (animationState.lastBeatTime || currentTime);
 
-      // Update cardiac cycle based on EKG analysis
-      updateCardiacCycle(currentTime, deltaTime);
+      // Only update animations when playing, but always render
+      if (controls.isPlaying) {
 
-      // Update electrical conduction animation
-      updateElectricalConduction(currentTime);
+        // Update cardiac cycle based on EKG analysis
+        updateCardiacCycle(currentTime, deltaTime);
 
-      // Update chamber contractions
-      updateChamberContractions(currentTime);
+        // Update electrical conduction animation
+        updateElectricalConduction(currentTime);
 
-      // Update coronary blood flow
-      updateCoronaryFlow(currentTime);
+        // Update chamber contractions
+        updateChamberContractions(currentTime);
 
-      // Camera controls and rotation
-      if (controls.autoRotate) {
-        updateCameraRotation(currentTime);
+        // Update coronary blood flow
+        updateCoronaryFlow(currentTime);
+
+        // Camera controls and rotation
+        if (controls.autoRotate) {
+          updateCameraRotation(currentTime);
+        }
       }
 
       // Render the scene
@@ -802,7 +974,7 @@ export const Advanced3DHeartVisualization: React.FC<Advanced3DHeartVisualization
   };
 
   /**
-   * Update chamber contractions based on electrical timing
+   * Update chamber contractions based on electrical timing - ENHANCED FOR VISIBILITY
    */
   const updateChamberContractions = (currentTime: number) => {
     if (!heartGeometryRef.current) return;
@@ -811,34 +983,53 @@ export const Advanced3DHeartVisualization: React.FC<Advanced3DHeartVisualization
     const cyclePosition = animationState.currentPhase;
     const { rightAtrium, leftAtrium, rightVentricle, leftVentricle } = heartGeometryRef.current;
 
-    // Atrial systole (P-wave related)
+    // Enhanced base heartbeat animation - always visible
+    const baseHeartbeat = Math.sin(cyclePosition * Math.PI * 2) * 0.1 + 1;
+    
+    // Atrial systole (P-wave related) - MORE PRONOUNCED
     const atrialContractionStart = 0.05;
-    const atrialContractionDuration = chamberTiming.atrialSystole / cardiacParameters.beatDuration;
+    const atrialContractionDuration = 0.15; // Fixed duration for visibility
     
     if (cyclePosition > atrialContractionStart && cyclePosition < atrialContractionStart + atrialContractionDuration) {
       const contractionPhase = (cyclePosition - atrialContractionStart) / atrialContractionDuration;
-      const contractionAmount = Math.sin(contractionPhase * Math.PI) * 0.15 + 1;
+      const contractionAmount = Math.sin(contractionPhase * Math.PI) * 0.25 + baseHeartbeat; // More pronounced
       
-      rightAtrium.scale.setScalar(contractionAmount);
-      leftAtrium.scale.setScalar(contractionAmount);
+      if (rightAtrium && rightAtrium.scale) {
+        rightAtrium.scale.setScalar(contractionAmount);
+      }
+      if (leftAtrium && leftAtrium.scale) {
+        leftAtrium.scale.setScalar(contractionAmount);
+      }
     } else {
-      rightAtrium.scale.setScalar(1);
-      leftAtrium.scale.setScalar(1);
+      if (rightAtrium && rightAtrium.scale) {
+        rightAtrium.scale.setScalar(baseHeartbeat);
+      }
+      if (leftAtrium && leftAtrium.scale) {
+        leftAtrium.scale.setScalar(baseHeartbeat);
+      }
     }
 
-    // Ventricular systole (QRS-wave related)
-    const ventricularContractionStart = atrialContractionStart + atrialContractionDuration + 0.05;
-    const ventricularContractionDuration = chamberTiming.ventricularSystole / cardiacParameters.beatDuration;
+    // Ventricular systole (QRS-wave related) - MORE PRONOUNCED
+    const ventricularContractionStart = atrialContractionStart + atrialContractionDuration + 0.08;
+    const ventricularContractionDuration = 0.25; // Fixed duration for visibility
     
     if (cyclePosition > ventricularContractionStart && cyclePosition < ventricularContractionStart + ventricularContractionDuration) {
       const contractionPhase = (cyclePosition - ventricularContractionStart) / ventricularContractionDuration;
-      const contractionAmount = 1 - Math.sin(contractionPhase * Math.PI) * 0.25;
+      const contractionAmount = baseHeartbeat - Math.sin(contractionPhase * Math.PI) * 0.3; // More pronounced contraction
       
-      rightVentricle.scale.setScalar(contractionAmount);
-      leftVentricle.scale.setScalar(contractionAmount);
+      if (rightVentricle && rightVentricle.scale) {
+        rightVentricle.scale.setScalar(Math.max(0.6, contractionAmount)); // Minimum scale for visibility
+      }
+      if (leftVentricle && leftVentricle.scale) {
+        leftVentricle.scale.setScalar(Math.max(0.6, contractionAmount)); // Minimum scale for visibility
+      }
     } else {
-      rightVentricle.scale.setScalar(1);
-      leftVentricle.scale.setScalar(1);
+      if (rightVentricle && rightVentricle.scale) {
+        rightVentricle.scale.setScalar(baseHeartbeat);
+      }
+      if (leftVentricle && leftVentricle.scale) {
+        leftVentricle.scale.setScalar(baseHeartbeat);
+      }
     }
 
     // Apply rhythm-specific abnormalities
