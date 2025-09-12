@@ -12,8 +12,8 @@
     "test": "jest"
   },
   "dependencies": {
-    "three": "^0.158.0",
-    "@types/three": "^0.158.3",
+    "three": "^0.180.0",
+    "@types/three": "^0.180.0",
     "dat.gui": "^0.7.9",
     "stats.js": "^0.17.0",
     "@ekg-sim/medical-types": "file:../medical-types"

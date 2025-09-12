@@ -21,10 +21,10 @@ import {
 } from 'lucide-react';
 
 // Import our medical accuracy components
-import { AnatomicalHeartModel } from '../../../packages/heart-3d/src/AnatomicalHeartModel';
-import { ConductionSystemVisualizer } from '../../../packages/heart-3d/src/ConductionSystemVisualizer';
-import { ElectrophysiologyMapper } from '../../../packages/ekg-processor/src/ElectrophysiologyMapper';
-import { ekgAnalyzer } from '../../../packages/ekg-processor/src/index';
+import { AnatomicalHeartModel } from '@/packages/heart-3d/src/AnatomicalHeartModel';
+import { ConductionSystemVisualizer } from '@/packages/heart-3d/src/ConductionSystemVisualizer';
+import { ElectrophysiologyMapper } from '@/packages/ekg-processor/src/ElectrophysiologyMapper';
+import { processEKGFile } from '@/packages/ekg-processor/src/index';
 
 // Medical data interfaces
 interface MedicalAccuracyData {
@@ -266,19 +266,10 @@ export const MedicallyAccurateHeartVisualization: React.FC<MedicalAccurateHeartV
     };
   }, []);
 
-  /**
-   * Process EKG file and update visualization
-   */
-  useEffect(() => {
-    if (ekgFile && controls.realTimeProcessing) {
-      processEKGFile(ekgFile);
-    }
-  }, [ekgFile, controls.realTimeProcessing]);
-
-  const processEKGFile = useCallback(async (file: File) => {
+  const handleEKGFile = useCallback(async (file: File) => {
     try {
       // Analyze EKG file using our enhanced analyzer
-      const analysis = await ekgAnalyzer.analyzeEKGFile(file);
+      const analysis = await processEKGFile(file);
       setCurrentEKGAnalysis(analysis);
 
       // Map EKG analysis to heart model
@@ -297,6 +288,15 @@ export const MedicallyAccurateHeartVisualization: React.FC<MedicalAccurateHeartV
       setMedicalAccuracy(prev => ({ ...prev, validationStatus: 'error' }));
     }
   }, []);
+
+  /**
+   * Process EKG file and update visualization
+   */
+  useEffect(() => {
+    if (ekgFile && controls.realTimeProcessing) {
+      handleEKGFile(ekgFile);
+    }
+  }, [ekgFile, controls.realTimeProcessing, handleEKGFile]);
 
   const updateMedicalAccuracyMetrics = useCallback(() => {
     if (!anatomicalHeartRef.current || !conductionVisualizerRef.current) return;

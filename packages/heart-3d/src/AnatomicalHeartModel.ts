@@ -158,6 +158,9 @@ export class AnatomicalHeartModel {
     this.chambers = new Map();
     this.conductionNodes = new Map();
     this.electricalWaves = new Map();
+    this.coronaryArteries = new THREE.Group();
+    this.valves = new THREE.Group();
+    this.anatomicalLabels = new THREE.Group();
     this.animationClock = new THREE.Clock();
     
     this.medicalAccuracyMetrics = {

@@ -200,17 +200,17 @@ export class ElectrophysiologyMapper {
   }
 
   private updateTimingCalibration(ekgAnalysis: EKGAnalysisResult): void {
-    const heartRate = ekgAnalysis.rhythm_analysis.heart_rate;
+    const heartRate = ekgAnalysis.analysis.heart_rate;
     this.timingCalibration.heartRate = heartRate;
     this.timingCalibration.cycleLength = (60 / heartRate) * 1000; // Convert BPM to ms
 
     // Adjust timing based on measured intervals
-    if (ekgAnalysis.timing_measurements) {
-      const measurements = ekgAnalysis.timing_measurements;
+    if (ekgAnalysis.analysis.conduction_timing) {
+      const measurements = ekgAnalysis.analysis.conduction_timing;
       
       // Update conduction times based on measured intervals
       ELECTROPHYSIOLOGY_MAPPING.CONDUCTION_TIMES.AV_NODE_DELAY = 
-        Math.max(50, measurements.pr_interval - 80); // PR interval - P wave duration
+        Math.max(50, ekgAnalysis.analysis.intervals.pr_interval - 80); // PR interval - P wave duration
       
       ELECTROPHYSIOLOGY_MAPPING.CONDUCTION_TIMES.VENTRICULAR_DEPOLARIZATION = 
         Math.max(60, measurements.qrs_duration);
@@ -222,20 +222,20 @@ export class ElectrophysiologyMapper {
     ekgAnalysis: EKGAnalysisResult
   ): ConductionRegion[] {
     const activeRegions: ConductionRegion[] = [];
-    const rhythmType = ekgAnalysis.rhythm_analysis.primary_rhythm;
+    const rhythmType = ekgAnalysis.analysis.rhythm_classification;
 
     // Map rhythm to conduction pattern
     switch (rhythmType) {
-      case 'Normal Sinus Rhythm':
+      case 'normal_sinus':
         activeRegions.push(...this.getNormalConductionRegions(cyclePosition));
         break;
-      case 'Atrial Fibrillation':
+      case 'atrial_fibrillation':
         activeRegions.push(...this.getAtrialFibrillationRegions(cyclePosition));
         break;
-      case 'Ventricular Tachycardia':
+      case 'ventricular_tachycardia':
         activeRegions.push(...this.getVentricularTachycardiaRegions(cyclePosition));
         break;
-      case 'First Degree AV Block':
+      case 'heart_block':
         activeRegions.push(...this.getFirstDegreeBlockRegions(cyclePosition, ekgAnalysis));
         break;
       default:
@@ -370,8 +370,8 @@ export class ElectrophysiologyMapper {
     
     // Modify AV node region to show prolonged conduction
     const avRegion = regions.find(r => r.regionId === 'AV_NODE');
-    if (avRegion && ekgAnalysis.timing_measurements) {
-      const prolongedDelay = ekgAnalysis.timing_measurements.pr_interval - 80; // Subtract P wave
+    if (avRegion && ekgAnalysis.analysis.intervals) {
+      const prolongedDelay = ekgAnalysis.analysis.intervals.pr_interval - 80; // Subtract P wave
       avRegion.depolarizationDuration = prolongedDelay;
       avRegion.conductionVelocity *= 0.5; // Slower conduction
     }
@@ -384,16 +384,16 @@ export class ElectrophysiologyMapper {
     ekgAnalysis: EKGAnalysisResult
   ): ElectricalWave[] {
     const waves: ElectricalWave[] = [];
-    const rhythmType = ekgAnalysis.rhythm_analysis.primary_rhythm;
+    const rhythmType = ekgAnalysis.analysis.rhythm_classification;
 
     switch (rhythmType) {
-      case 'Normal Sinus Rhythm':
+      case 'normal_sinus':
         waves.push(...this.createNormalWaves(cyclePosition));
         break;
-      case 'Atrial Fibrillation':
+      case 'atrial_fibrillation':
         waves.push(...this.createFibrillationWaves(cyclePosition));
         break;
-      case 'Ventricular Tachycardia':
+      case 'ventricular_tachycardia':
         waves.push(...this.createVentricularTachycardiaWaves(cyclePosition));
         break;
     }

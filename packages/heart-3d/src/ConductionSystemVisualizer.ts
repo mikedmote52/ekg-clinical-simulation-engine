@@ -793,7 +793,7 @@ export class ConductionSystemVisualizer {
   private calculatePathwayProgress(pathway: ConductionPathway, wave: ElectricalWave): number {
     // Calculate progress based on wave position along pathway
     // Simplified calculation - would use proper curve mathematics in production
-    return Math.min(1, wave.intensity);
+    return Math.min(1, wave.amplitude);
   }
 
   private animatePathwayFlow(pathway: ConductionPathway): void {
@@ -832,7 +832,7 @@ export class ConductionSystemVisualizer {
         );
         
         if (distance < field.fieldRadius) {
-          field.intensity = Math.max(field.intensity, wave.intensity * (1 - distance / field.fieldRadius));
+          field.intensity = Math.max(field.intensity, wave.amplitude * (1 - distance / field.fieldRadius));
         }
       });
       
@@ -866,13 +866,13 @@ export class ConductionSystemVisualizer {
 
   private visualizeElectricalWave(wave: ElectricalWave): void {
     // Create dynamic wave visualization
-    const waveGeometry = new THREE.SphereGeometry(wave.intensity * 5, 16, 12);
+    const waveGeometry = new THREE.SphereGeometry(wave.amplitude * 5, 16, 12);
     const waveMaterial = new THREE.MeshPhongMaterial({
       color: wave.waveType === 'depolarization' ? 0xffff00 : 0x0088ff,
       transparent: true,
-      opacity: wave.intensity * 0.6,
+      opacity: wave.amplitude * 0.6,
       emissive: wave.waveType === 'depolarization' ? 0x444400 : 0x002244,
-      emissiveIntensity: wave.intensity * 0.3
+      emissiveIntensity: wave.amplitude * 0.3
     });
     
     const waveMesh = new THREE.Mesh(waveGeometry, waveMaterial);
