@@ -3,15 +3,23 @@
   "version": "1.0.0",
   "description": "Clinical-grade EKG simulation with 3D heart visualization and multi-agent orchestration",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "cd apps/web && npm run dev",
-    "build": "cd apps/web && npm install && npm run build",
+    "build": "npm run build:packages && cd apps/web && npm run build",
+    "build:packages": "npm run build:heart-3d && npm run build:ekg-processor && npm run build:medical-types",
+    "build:heart-3d": "cd packages/heart-3d && npm run build",
+    "build:ekg-processor": "cd packages/ekg-processor && npm run build",
+    "build:medical-types": "cd packages/medical-types && npm run build || echo 'Medical types build skipped'",
     "start": "cd apps/web && npm start",
     "test": "echo \"Running tests...\"",
     "lint": "echo \"Linting...\"",
     "typecheck": "echo \"Type checking...\"",
     "medical:validate": "echo \"Medical validation...\"",
-    "postinstall": "echo \"Install complete\""
+    "postinstall": "npm run build:packages || echo 'Package builds skipped during install'"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

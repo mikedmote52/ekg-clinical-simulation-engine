@@ -2,7 +2,7 @@ services:
   - type: web
     name: ekg-clinical-simulation-engine
     env: node
-    buildCommand: cd apps/web && npm install eslint --save-dev && npm install && npm run build
+    buildCommand: npm install && npm run build
     startCommand: cd apps/web && npm start
     rootDir: .
     plan: free

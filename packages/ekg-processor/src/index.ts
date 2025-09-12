@@ -104,6 +104,8 @@ export async function processEKGFile(file: File): Promise<EKGAnalysisResult> {
 }
 
 
+export { ElectrophysiologyMapper } from './ElectrophysiologyMapper';
+
 export default {
   processEKGFile
 };

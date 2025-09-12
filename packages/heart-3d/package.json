@@ -2,8 +2,21 @@
   "name": "@ekg-sim/heart-3d",
   "version": "1.0.0",
   "description": "Three.js-based 3D heart visualization engine with medical accuracy",
+  "type": "module",
   "main": "dist/index.js",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./src/*": {
+      "import": "./src/*",
+      "require": "./src/*"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "dev": "rollup -c -w",
@@ -15,7 +28,8 @@
     "three": "^0.180.0",
     "@types/three": "^0.180.0",
     "dat.gui": "^0.7.9",
-    "stats.js": "^0.17.0"
+    "stats.js": "^0.17.0",
+    "@ekg-sim/medical-types": "workspace:*"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^11.1.5",

@@ -2,13 +2,29 @@
   "name": "@ekg-sim/ekg-processor",
   "version": "1.0.0",
   "description": "Clinical EKG processing and rhythm analysis with medical accuracy",
+  "type": "module",
   "main": "dist/index.js",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./src/*": {
+      "import": "./src/*",
+      "require": "./src/*"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
     "lint": "eslint src/**/*.ts",
     "test": "jest"
+  },
+  "dependencies": {
+    "@ekg-sim/medical-types": "workspace:*"
   },
   "devDependencies": {
     "jest": "^29.7.0",

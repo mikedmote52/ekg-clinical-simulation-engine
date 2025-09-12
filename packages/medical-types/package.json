@@ -2,8 +2,21 @@
   "name": "@ekg-sim/medical-types",
   "version": "1.0.0",
   "description": "Shared medical data types and validation for EKG simulation",
+  "type": "module",
   "main": "dist/index.js",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./src/*": {
+      "import": "./src/*",
+      "require": "./src/*"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",

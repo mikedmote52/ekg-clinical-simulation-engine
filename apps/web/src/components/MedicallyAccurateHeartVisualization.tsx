@@ -21,10 +21,9 @@ import {
 } from 'lucide-react';
 
 // Import our medical accuracy components
-import { AnatomicalHeartModel } from '@/packages/heart-3d/src/AnatomicalHeartModel';
-import { ConductionSystemVisualizer } from '@/packages/heart-3d/src/ConductionSystemVisualizer';
-import { ElectrophysiologyMapper } from '@/packages/ekg-processor/src/ElectrophysiologyMapper';
-import { processEKGFile } from '@/packages/ekg-processor/src/index';
+import { AnatomicalHeartModel, ConductionSystemVisualizer } from '@ekg-sim/heart-3d';
+import { ElectrophysiologyMapper } from '@ekg-sim/ekg-processor';
+import { processEKGFile } from '@ekg-sim/ekg-processor';
 
 // Medical data interfaces
 interface MedicalAccuracyData {

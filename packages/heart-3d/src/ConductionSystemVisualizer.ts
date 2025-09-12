@@ -6,17 +6,12 @@
  */
 
 import * as THREE from 'three';
-import { ElectrophysiologyState, ElectricalWave, ConductionRegion } from '../../ekg-processor/src/ElectrophysiologyMapper';
+import { ElectrophysiologyState, ElectricalWave, ConductionRegion, ConductionPathway as BaseConductionPathway } from '@ekg-sim/medical-types';
 
-export interface ConductionPathway {
-  pathwayId: string;
+export interface ConductionPathway extends Omit<BaseConductionPathway, 'startPoint' | 'endPoint' | 'intermediatePoints'> {
   startPoint: THREE.Vector3;
   endPoint: THREE.Vector3;
   intermediatePoints: THREE.Vector3[];
-  pathwayType: 'atrial' | 'av_nodal' | 'his_purkinje' | 'ventricular';
-  conductionVelocity: number;
-  isActive: boolean;
-  activationProgress: number; // 0-1
   visualElements: THREE.Group;
 }
 
