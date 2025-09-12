@@ -15,8 +15,7 @@
     "three": "^0.180.0",
     "@types/three": "^0.180.0",
     "dat.gui": "^0.7.9",
-    "stats.js": "^0.17.0",
-    "@ekg-sim/medical-types": "file:../medical-types"
+    "stats.js": "^0.17.0"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^11.1.5",

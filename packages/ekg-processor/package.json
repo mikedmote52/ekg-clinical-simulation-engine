@@ -10,9 +10,6 @@
     "lint": "eslint src/**/*.ts",
     "test": "jest"
   },
-  "dependencies": {
-    "@ekg-sim/medical-types": "file:../medical-types"
-  },
   "devDependencies": {
     "jest": "^29.7.0",
     "typescript": "^5.2.2"

@@ -3,7 +3,39 @@
  * Enhanced clinical-grade EKG analysis system with real file processing
  */
 
-import { MedicalAnalysis } from '@ekg-sim/medical-types';
+// Medical analysis interface
+export interface MedicalAnalysis {
+  rhythm_classification: 'normal_sinus' | 'atrial_fibrillation' | 'ventricular_tachycardia' | 
+                        'heart_block' | 'sinus_bradycardia' | 'sinus_tachycardia' | 'premature_ventricular_contractions';
+  heart_rate: number;
+  conduction_timing: {
+    sa_to_av_delay: number;
+    av_to_his_delay: number;
+    his_to_purkinje_delay: number;
+    cardiac_cycle_ms: number;
+    qrs_duration: number;
+    qt_interval: number;
+  };
+  clinical_significance: 'normal' | 'monitor' | 'urgent' | 'critical';
+  chamber_coordination: {
+    atrial_contraction: boolean;
+    ventricular_contraction: boolean;
+    av_synchrony: boolean;
+    sequential_activation: boolean;
+  };
+  intervals: {
+    pr_interval: number;
+    qrs_width: number;
+    qt_corrected: number;
+    rr_interval: number;
+  };
+  pathophysiology: string;
+  clinical_context: {
+    symptoms_likely: string[];
+    treatment_considerations: string[];
+    monitoring_requirements: string[];
+  };
+}
 
 // Simple analysis result structure for initial implementation
 export interface EKGAnalysisResult {
@@ -71,15 +103,6 @@ export async function processEKGFile(file: File): Promise<EKGAnalysisResult> {
   };
 }
 
-// Re-export medical types for convenience
-export type { 
-  MedicalAnalysis, 
-  ConductionTiming,
-  AnimationTiming,
-  HeartVisualization,
-  EducationalContent,
-  AppContext
-} from '@ekg-sim/medical-types';
 
 export default {
   processEKGFile
