@@ -27,9 +27,9 @@
     "tailwindcss": "^3.3.6",
     "three": "^0.180.0",
     "typescript": "^5.2.2",
-    "@ekg-sim/medical-types": "workspace:*",
-    "@ekg-sim/heart-3d": "workspace:*",
-    "@ekg-sim/ekg-processor": "workspace:*"
+    "@ekg-sim/medical-types": "file:../../packages/medical-types",
+    "@ekg-sim/heart-3d": "file:../../packages/heart-3d",
+    "@ekg-sim/ekg-processor": "file:../../packages/ekg-processor"
   },
   "devDependencies": {
     "eslint": "^8.57.1",

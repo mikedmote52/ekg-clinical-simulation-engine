@@ -24,7 +24,7 @@
     "test": "jest"
   },
   "dependencies": {
-    "@ekg-sim/medical-types": "workspace:*"
+    "@ekg-sim/medical-types": "file:../medical-types"
   },
   "devDependencies": {
     "jest": "^29.7.0",
