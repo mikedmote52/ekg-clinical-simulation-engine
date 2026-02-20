@@ -93,16 +93,19 @@ async def ingest_ecg(file: UploadFile = File(...)):
 
     try:
         if is_pdf:
-            gray, debug_overlay, grid, preprocessed = preprocess(
+            gray, debug_overlay, grid, preprocessed, corrected_bgr = preprocess(
                 source=file_bytes, session_id=session_id, is_pdf=True
             )
         else:
             pil_image = Image.open(io.BytesIO(file_bytes))
-            gray, debug_overlay, grid, preprocessed = preprocess(
+            gray, debug_overlay, grid, preprocessed, corrected_bgr = preprocess(
                 source=pil_image, session_id=session_id, is_pdf=False
             )
 
-        digitized = extract_all_leads(gray=gray, grid=grid, session_id=session_id)
+        # Pass BGR image for color-aware grid removal
+        digitized = extract_all_leads(
+            gray=gray, grid=grid, session_id=session_id, bgr_image=corrected_bgr
+        )
 
         _save_session(session_id, {
             "file_bytes": file_bytes,

@@ -75,7 +75,7 @@ class ECGSpecialist:
 
             # Step 1: Preprocess
             logger.info("ECG Specialist: Preprocessing image...")
-            gray, debug_overlay, grid, preprocessed = preprocess(
+            gray, debug_overlay, grid, preprocessed, corrected_bgr = preprocess(
                 source=source,
                 session_id=input_data.session_id,
                 is_pdf=is_pdf,
@@ -84,12 +84,13 @@ class ECGSpecialist:
             output.debug_overlay = debug_overlay
             output.warnings.extend(preprocessed.warnings)
 
-            # Step 2: Extract waveforms
+            # Step 2: Extract waveforms (pass BGR for color-aware grid removal)
             logger.info("ECG Specialist: Extracting waveforms...")
             digitized = extract_all_leads(
                 gray=gray,
                 grid=grid,
                 session_id=input_data.session_id,
+                bgr_image=corrected_bgr,
             )
             output.digitized_ecg = digitized
             output.warnings.extend(digitized.warnings)

@@ -2,11 +2,18 @@
 
 import React, { useRef, useCallback, useMemo, useState } from 'react';
 import { useEkgStore } from '../store/ekgStore';
+import { getSyntheticWaveforms } from '../lib/syntheticWaveform';
 
 const LEAD_ORDER = ['I', 'II', 'III', 'aVR', 'aVL', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6'];
 
 const GRID_1MM = '#f5c6c6';
 const GRID_5MM = '#e8a0a0';
+
+function hasRealWaveforms(waveforms: Record<string, { time_ms: number[]; amplitude_mv: number[] }> | undefined): boolean {
+  if (!waveforms || typeof waveforms !== 'object') return false;
+  const first = Object.values(waveforms)[0];
+  return Boolean(first?.time_ms?.length && first?.amplitude_mv?.length);
+}
 
 export function ECGSignalPane() {
   const {
@@ -18,19 +25,29 @@ export function ECGSignalPane() {
   } = useEkgStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoverPoint, setHoverPoint] = useState<{ timeMs: number; amplitudeMv: number; leadId: string } | null>(null);
-  const [caliperDrag, setCaliperDrag] = useState<{ type: 'pr' | 'qrs' | 'qt'; startX: number } | null>(null);
 
   const cycleMs = vizParams?.cardiac_cycle_duration_ms ?? 1000;
   const intervals = vizParams?.intervals ?? {};
   const phaseBoundaries = vizParams?.phase_boundaries ?? {};
 
-  const leadData = useMemo(() => {
+  const { leadData, isSynthetic } = useMemo(() => {
     const waveforms = vizParams?.waveforms ?? {};
-    return LEAD_ORDER.map((id) => ({
-      id,
-      data: waveforms[id] ?? { time_ms: [], amplitude_mv: [] },
-    })).filter((l) => l.data.time_ms.length > 0 || l.data.amplitude_mv.length > 0);
-  }, [vizParams?.waveforms]);
+    const real = hasRealWaveforms(waveforms);
+    if (real) {
+      return {
+        leadData: LEAD_ORDER.map((id) => ({
+          id,
+          data: waveforms[id] ?? { time_ms: [], amplitude_mv: [] },
+        })).filter((l) => l.data.time_ms.length > 0 || l.data.amplitude_mv.length > 0),
+        isSynthetic: false,
+      };
+    }
+    const synthetic = getSyntheticWaveforms(cycleMs, phaseBoundaries, intervals);
+    return {
+      leadData: LEAD_ORDER.map((id) => ({ id, data: synthetic[id] })),
+      isSynthetic: true,
+    };
+  }, [vizParams?.waveforms, cycleMs, phaseBoundaries, intervals]);
 
   const handleClickOrDrag = useCallback(
     (e: React.MouseEvent, type: 'click' | 'drag') => {
@@ -95,6 +112,11 @@ export function ECGSignalPane() {
           }}
         />
 
+        {isSynthetic && (
+          <p className="text-xs text-amber-700 dark:text-amber-400 mb-2 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded">
+            Synthetic trace from intervals — connect backend with waveform data for real ECG
+          </p>
+        )}
         {/* Lead traces */}
         <div
           className="relative flex flex-col gap-1 pt-8 pb-4"
@@ -103,7 +125,7 @@ export function ECGSignalPane() {
         >
           {leadData.length === 0 ? (
             <div className="h-48 flex items-center justify-center text-slate-500 text-sm">
-              No waveform data in vizParams — backend may not include waveforms yet
+              No waveform or interval data available
             </div>
           ) : (
             leadData.map(({ id, data }) => {

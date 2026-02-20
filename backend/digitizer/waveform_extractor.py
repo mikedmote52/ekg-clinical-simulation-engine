@@ -38,13 +38,14 @@ def extract_waveform_from_region(
     gray: np.ndarray,
     region: LeadRegion,
     grid: GridCharacterization,
+    bgr_image: np.ndarray | None = None,
 ) -> LeadTimeseries:
     """
     Extract a calibrated timeseries from a single lead region.
 
     Steps:
     1. Crop the lead region
-    2. Remove grid lines
+    2. Remove grid lines (color-aware if color image available)
     3. Trace waveform centerline using column-wise intensity minimum
     4. Convert pixel coordinates to time/amplitude
     5. Resample to 500 Hz
@@ -58,15 +59,25 @@ def extract_waveform_from_region(
     if lead_w < 10 or lead_h < 10:
         return _failed_lead(region.lead_name, f"Lead region too small: {lead_w}x{lead_h}")
 
-    # Step 2: Remove grid
+    # Crop BGR image for color-aware grid removal
+    lead_bgr = None
+    if bgr_image is not None and len(bgr_image.shape) == 3:
+        lead_bgr = region.crop(bgr_image)
+
+    # Step 2: Remove grid (with color-aware fallback)
     try:
-        cleaned = remove_grid_combined(lead_image, grid.small_square_px)
+        cleaned = remove_grid_combined(lead_image, grid.small_square_px, bgr_image=lead_bgr)
     except Exception as e:
         logger.warning(f"Grid removal failed for {region.lead_name}: {e}")
         cleaned = lead_image.copy()
 
     # Step 3: Trace waveform centerline
     trace_y, confidence_per_col = _trace_centerline(cleaned)
+
+    if trace_y is None:
+        # Fallback: try on the raw (uncleaned) image
+        logger.warning(f"Tracing failed on cleaned image for {region.lead_name}, trying raw")
+        trace_y, confidence_per_col = _trace_centerline(lead_image)
 
     if trace_y is None:
         return _failed_lead(region.lead_name, "Waveform tracing failed")
@@ -110,7 +121,7 @@ def extract_waveform_from_region(
         resampled_amplitude = amplitude_mv
 
     # Overall confidence
-    valid_cols = confidence_per_col[confidence_per_col > 0.3]
+    valid_cols = confidence_per_col[confidence_per_col > 0.1]  # lowered from 0.3
     overall_confidence = float(len(valid_cols) / max(len(confidence_per_col), 1))
     overall_confidence = min(max(overall_confidence, 0.0), 1.0)
 
@@ -150,14 +161,15 @@ def _trace_centerline(
     for col in range(w):
         column = blurred[:, col].astype(np.float64)
 
-        if column.max() < 10:
+        # Lowered threshold from 10 to 3 — catch faint waveforms after grid removal
+        if column.max() < 3:
             # No significant signal in this column
             trace_y[col] = h / 2
             confidence[col] = 0.0
             continue
 
-        # Threshold at 40% of column max to isolate waveform
-        threshold = column.max() * 0.4
+        # Lowered threshold from 40% to 20% to catch fainter waveform signal
+        threshold = column.max() * 0.2
         mask = column > threshold
 
         if not np.any(mask):
@@ -175,10 +187,17 @@ def _trace_centerline(
             trace_y[col] = centroid
             # Confidence based on peak sharpness
             peak_width = np.sum(mask)
-            confidence[col] = min(1.0, 5.0 / max(peak_width, 1))
+            # More generous confidence: allow wider peaks (typical of real ECGs)
+            confidence[col] = min(1.0, 10.0 / max(peak_width, 1))
         else:
             trace_y[col] = h / 2
             confidence[col] = 0.0
+
+    # Check if we got any signal at all
+    signal_cols = np.sum(confidence > 0.05)
+    if signal_cols < w * 0.05:
+        # Less than 5% of columns have any signal — tracing failed
+        return None, confidence
 
     # Apply continuity filter: reject jumps > 20% of image height
     trace_y = _apply_continuity_filter(trace_y, confidence, max_jump_fraction=0.2, height=h)
@@ -258,6 +277,7 @@ def extract_all_leads(
     grid: GridCharacterization,
     session_id: str,
     lead_regions: Optional[list[LeadRegion]] = None,
+    bgr_image: np.ndarray | None = None,
 ) -> DigitizedECG:
     """
     Extract waveforms from all 12 leads.
@@ -267,6 +287,7 @@ def extract_all_leads(
         grid: Grid characterization from preprocessor
         session_id: Session identifier
         lead_regions: Pre-detected lead regions (auto-detected if None)
+        bgr_image: Original BGR image for color-aware grid removal
 
     Returns:
         Complete digitized ECG with all lead timeseries
@@ -290,7 +311,7 @@ def extract_all_leads(
 
     for region in lead_regions:
         logger.info(f"Extracting lead {region.lead_name}...")
-        ts = extract_waveform_from_region(gray, region, grid)
+        ts = extract_waveform_from_region(gray, region, grid, bgr_image=bgr_image)
         leads.append(ts)
 
         confidences.append(LeadDigitizationConfidence(
@@ -307,13 +328,17 @@ def extract_all_leads(
     if is_stitched:
         warnings.append("Leads appear to be sequentially acquired (stitched), not simultaneous")
 
-    # Check overall readiness
+    # Check overall readiness — always allow interpretation even with degraded quality
     successful_leads = [l for l in leads if l.failure_reason is None]
-    ready = len(successful_leads) >= 6  # Need at least 6 good leads
+    leads_with_signal = [l for l in leads if l.confidence > 0.05]
 
-    if not ready:
+    # Allow interpretation if we have ANY leads, even at low confidence.
+    # The display_contract will communicate uncertainty to the user.
+    ready = len(successful_leads) >= 1 or len(leads_with_signal) >= 1
+
+    if len(successful_leads) < 6:
         warnings.append(
-            f"Only {len(successful_leads)}/{len(leads)} leads extracted successfully; "
+            f"Only {len(successful_leads)}/{len(leads)} leads extracted with usable confidence; "
             "interpretation quality may be degraded"
         )
 

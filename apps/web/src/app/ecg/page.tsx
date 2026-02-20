@@ -9,12 +9,19 @@ import { InterpretationPane } from '../../components/InterpretationPane';
 import { HonestContractBadge } from '../../components/HonestContractBadge';
 import { useEkgStore } from '../../store/ekgStore';
 
+function hasRealWaveforms(vizParams: { waveforms?: Record<string, { time_ms: number[]; amplitude_mv: number[] }> } | null): boolean {
+  if (!vizParams?.waveforms || typeof vizParams.waveforms !== 'object') return false;
+  const first = Object.values(vizParams.waveforms)[0];
+  return Boolean(first?.time_ms?.length && first?.amplitude_mv?.length);
+}
+
 export default function ECGInterpretationPage() {
   const { sessionId, uploadStatus, vizParams } = useEkgStore();
 
   const showUpload = uploadStatus === 'idle' || uploadStatus === 'error';
   const showDigitizer = sessionId && (uploadStatus === 'digitizing' || uploadStatus === 'ready');
   const showMainContent = vizParams != null;
+  const isDemoStub = showMainContent && !hasRealWaveforms(vizParams);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
@@ -28,6 +35,12 @@ export default function ECGInterpretationPage() {
       </header>
 
       <HonestContractBadge />
+
+      {isDemoStub && (
+        <div className="bg-amber-100 dark:bg-amber-900/30 border-b border-amber-300 dark:border-amber-700 px-4 py-2 text-sm text-amber-800 dark:text-amber-200 text-center">
+          Using demo interpretation (no real backend). Connect your interpretation API for accurate, ECG-specific results.
+        </div>
+      )}
 
       <main className="container mx-auto px-4 py-6 max-w-7xl">
         {showUpload && (

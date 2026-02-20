@@ -20,6 +20,7 @@ export function InterpretationPane() {
   const evidenceSupported = display_contract?.evidence_supported ?? [];
   const modeledAssumptions = display_contract?.modeled_assumption ?? [];
   const alternates = uncertainty?.alternate_models ?? [];
+  const hasDiagnosis = primary_diagnosis != null && String(primary_diagnosis).trim() !== '';
 
   return (
     <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
@@ -29,7 +30,11 @@ export function InterpretationPane() {
           <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">
             Primary diagnosis
           </h2>
-          <p className="mt-1 text-slate-700 dark:text-slate-300">{primary_diagnosis}</p>
+          {hasDiagnosis ? (
+            <p className="mt-1 text-slate-700 dark:text-slate-300">{primary_diagnosis}</p>
+          ) : (
+            <p className="mt-1 text-slate-500 italic">No diagnosis returned from interpretation.</p>
+          )}
         </div>
 
         {/* Section 1: Evidence supported */}

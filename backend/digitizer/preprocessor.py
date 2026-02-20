@@ -341,7 +341,7 @@ def preprocess(
     source: Image.Image | bytes,
     session_id: Optional[str] = None,
     is_pdf: bool = False,
-) -> tuple[np.ndarray, np.ndarray, GridCharacterization, PreprocessedImage]:
+) -> tuple[np.ndarray, np.ndarray, GridCharacterization, PreprocessedImage, np.ndarray]:
     """
     Main preprocessing pipeline.
 
@@ -351,7 +351,7 @@ def preprocess(
         is_pdf: Whether the source is PDF bytes
 
     Returns:
-        Tuple of (normalized_gray, debug_overlay, grid, preprocessed_metadata)
+        Tuple of (normalized_gray, debug_overlay, grid, preprocessed_metadata, corrected_bgr)
     """
     if session_id is None:
         session_id = str(uuid.uuid4())
@@ -425,4 +425,4 @@ def preprocess(
         warnings=warnings,
     )
 
-    return gray, debug_overlay, grid, preprocessed
+    return gray, debug_overlay, grid, preprocessed, corrected
