@@ -1,4 +1,5 @@
 services:
+  # Frontend — Next.js web app (Cursor)
   - type: web
     name: ekg-clinical-simulation-engine
     env: node
@@ -10,3 +11,35 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          name: ekg-interpretation-api
+          type: web
+          property: host
+
+  # Backend — FastAPI Python interpretation engine (Claude)
+  - type: web
+    name: ekg-interpretation-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    region: oregon
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.7"
+      - key: REDIS_URL
+        fromService:
+          name: ekg-sessions-redis
+          type: redis
+          property: connectionString
+    healthCheckPath: /api/health
+    autoDeploy: true
+
+  # Session store
+  - type: redis
+    name: ekg-sessions-redis
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []
