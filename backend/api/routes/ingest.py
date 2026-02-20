@@ -1,9 +1,11 @@
 """
-Ingest API route.
+API routes matching the frontend contract.
 
-POST /api/ingest — Accept ECG file upload, digitize, return preview.
-POST /api/interpret — Accept session_id, run full pipeline.
-GET  /api/session/{session_id}/overlay — Return debug overlay image.
+Frontend expects:
+  POST /api/ingest                       → { session_id }
+  GET  /api/session/{id}                 → { digitization, viz_params? }
+  POST /api/session/{id}/interpret       → VisualizationParameterJSON
+  GET  /api/session/{id}/overlay         → image/png
 """
 
 from __future__ import annotations
@@ -19,23 +21,24 @@ from fastapi.responses import StreamingResponse
 from PIL import Image
 
 from agents.orchestrator import Orchestrator
+from api.routes.frontend_adapter import adapt_to_frontend_viz_params
 from digitizer.preprocessor import preprocess
 from digitizer.waveform_extractor import extract_all_leads
-from models.schemas import LeadDigitizationConfidence, VisualizationParameterJSON
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["ingest"])
 
-# In-memory session store (replaced by Redis in production via session_store module)
-# Import will fallback to this dict if Redis is unavailable
+# ---------------------------------------------------------------------------
+# Session store
+# ---------------------------------------------------------------------------
+
 _sessions: dict[str, dict] = {}
 
 orchestrator = Orchestrator()
 
 
 def _get_session_store():
-    """Get the session store (Redis or in-memory fallback)."""
     try:
         from api.session_store import session_store
         return session_store
@@ -44,7 +47,6 @@ def _get_session_store():
 
 
 def _save_session(session_id: str, data: dict):
-    """Save session data."""
     store = _get_session_store()
     if store:
         store.save(session_id, data)
@@ -53,7 +55,6 @@ def _save_session(session_id: str, data: dict):
 
 
 def _load_session(session_id: str) -> dict | None:
-    """Load session data."""
     store = _get_session_store()
     if store:
         return store.load(session_id)
@@ -68,12 +69,10 @@ def _load_session(session_id: str) -> dict | None:
 async def ingest_ecg(file: UploadFile = File(...)):
     """
     Upload an ECG image or PDF for digitization.
-
-    Returns session_id, per-lead confidence, and readiness status.
+    Returns: { session_id }
     """
     session_id = str(uuid.uuid4())
 
-    # Validate file type
     content_type = file.content_type or ""
     filename = file.filename or ""
     is_pdf = "pdf" in content_type.lower() or filename.lower().endswith(".pdf")
@@ -88,13 +87,11 @@ async def ingest_ecg(file: UploadFile = File(...)):
             detail="Unsupported file type. Upload a PDF or image (PNG, JPG, TIFF, BMP).",
         )
 
-    # Read file
     file_bytes = await file.read()
     if len(file_bytes) == 0:
         raise HTTPException(status_code=400, detail="Empty file uploaded.")
 
     try:
-        # Preprocess
         if is_pdf:
             gray, debug_overlay, grid, preprocessed = preprocess(
                 source=file_bytes, session_id=session_id, is_pdf=True
@@ -105,12 +102,8 @@ async def ingest_ecg(file: UploadFile = File(...)):
                 source=pil_image, session_id=session_id, is_pdf=False
             )
 
-        # Extract waveforms
-        digitized = extract_all_leads(
-            gray=gray, grid=grid, session_id=session_id
-        )
+        digitized = extract_all_leads(gray=gray, grid=grid, session_id=session_id)
 
-        # Store in session for later interpretation
         _save_session(session_id, {
             "file_bytes": file_bytes,
             "is_pdf": is_pdf,
@@ -118,33 +111,11 @@ async def ingest_ecg(file: UploadFile = File(...)):
             "debug_overlay": debug_overlay,
             "grid": grid,
             "digitized": digitized,
-        })
-
-        # Build response
-        per_lead_confidence = [
-            {
-                "lead_name": lc.lead_name,
-                "confidence": lc.confidence,
-                "failure_reason": lc.failure_reason,
-            }
-            for lc in digitized.metadata.digitization_confidence
-        ]
-
-        return {
-            "session_id": session_id,
-            "digitization_preview_image_url": f"/api/session/{session_id}/overlay",
-            "per_lead_confidence": per_lead_confidence,
             "warnings": preprocessed.warnings + digitized.warnings,
             "ready_for_interpretation": digitized.ready_for_interpretation,
-            "metadata": {
-                "paper_speed": grid.paper_speed_mm_per_s,
-                "amplitude_scale": grid.amplitude_scale_mm_per_mv,
-                "grid_small_square_px": grid.small_square_px,
-                "calibration_detected": grid.calibration_pulse_detected,
-                "is_stitched": digitized.is_stitched,
-                "lead_count": len(digitized.leads),
-            },
-        }
+        })
+
+        return {"session_id": session_id}
 
     except Exception as e:
         logger.error(f"Ingest failed: {e}", exc_info=True)
@@ -152,21 +123,56 @@ async def ingest_ecg(file: UploadFile = File(...)):
 
 
 # ---------------------------------------------------------------------------
-# POST /api/interpret
+# GET /api/session/{session_id}
 # ---------------------------------------------------------------------------
 
-@router.post("/interpret")
-async def interpret_ecg(payload: dict):
+@router.get("/session/{session_id}")
+async def get_session(session_id: str):
     """
-    Run full interpretation pipeline on a previously ingested ECG.
-
-    Accepts: { "session_id": "..." }
-    Returns: Full VisualizationParameterJSON
+    Return digitization result for a session.
+    Matches frontend DigitizationResult type.
     """
-    session_id = payload.get("session_id")
-    if not session_id:
-        raise HTTPException(status_code=400, detail="session_id is required")
+    session = _load_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
 
+    digitized = session.get("digitized")
+
+    # Build per-lead confidence matching frontend's PerLeadConfidence
+    per_lead_confidence = []
+    if digitized:
+        for lc in digitized.metadata.digitization_confidence:
+            per_lead_confidence.append({
+                "lead_id": lc.lead_name,
+                "confidence": lc.confidence,
+            })
+
+    digitization = {
+        "per_lead_confidence": per_lead_confidence,
+        "warnings": session.get("warnings", []),
+        "overlay_image_url": f"/api/session/{session_id}/overlay",
+        "ready_for_interpretation": session.get("ready_for_interpretation", False),
+    }
+
+    response: dict = {"digitization": digitization}
+
+    # Include viz_params if interpretation already ran
+    if "viz_params" in session:
+        response["viz_params"] = session["viz_params"]
+
+    return response
+
+
+# ---------------------------------------------------------------------------
+# POST /api/session/{session_id}/interpret
+# ---------------------------------------------------------------------------
+
+@router.post("/session/{session_id}/interpret")
+async def interpret_ecg(session_id: str):
+    """
+    Run the full interpretation pipeline.
+    Returns VisualizationParameterJSON matching the frontend TypeScript interface.
+    """
     session = _load_session(session_id)
     if session is None:
         raise HTTPException(
@@ -175,25 +181,24 @@ async def interpret_ecg(payload: dict):
         )
 
     try:
-        # Re-open the image for the orchestrator
         file_bytes = session.get("file_bytes")
         is_pdf = session.get("is_pdf", False)
 
         if is_pdf:
-            result = orchestrator.run(
-                pdf_bytes=file_bytes, session_id=session_id
-            )
+            result = orchestrator.run(pdf_bytes=file_bytes, session_id=session_id)
         else:
             pil_image = Image.open(io.BytesIO(file_bytes))
-            result = orchestrator.run(
-                image=pil_image, session_id=session_id
-            )
+            result = orchestrator.run(image=pil_image, session_id=session_id)
 
-        # Update session with full result
+        # Adapt the internal schema to match the frontend's VisualizationParameterJSON
+        frontend_viz = adapt_to_frontend_viz_params(result)
+
+        # Cache in session
         session["result"] = result
+        session["viz_params"] = frontend_viz
         _save_session(session_id, session)
 
-        return result.visualization.model_dump()
+        return frontend_viz
 
     except Exception as e:
         logger.error(f"Interpretation failed: {e}", exc_info=True)
@@ -209,7 +214,7 @@ async def interpret_ecg(payload: dict):
 
 @router.get("/session/{session_id}/overlay")
 async def get_overlay(session_id: str):
-    """Return the debug overlay image for a session."""
+    """Return the debug overlay image as PNG."""
     session = _load_session(session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -218,7 +223,6 @@ async def get_overlay(session_id: str):
     if debug_overlay is None:
         raise HTTPException(status_code=404, detail="No debug overlay available")
 
-    # Encode as PNG
     success, buffer = cv2.imencode(".png", debug_overlay)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to encode overlay image")
