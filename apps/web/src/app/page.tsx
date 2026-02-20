@@ -234,6 +234,12 @@ export default function EKGEducationalPlatform() {
             </div>
           </div>
           <div className="flex items-center space-x-4">
+            <a
+              href="/ecg"
+              className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium transition-colors"
+            >
+              ECG Interpretation (JSON Viz)
+            </a>
             <Brain className="w-5 h-5 text-purple-400" />
             <Eye className="w-5 h-5 text-blue-400" />
             <Activity className="w-5 h-5 text-green-400" />
